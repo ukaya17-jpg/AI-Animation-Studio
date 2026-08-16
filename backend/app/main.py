@@ -1,8 +1,10 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -47,6 +49,9 @@ if settings.force_https:
 app.add_exception_handler(ServiceUnavailableError, service_unavailable_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
 app.include_router(api_router)
+app.mount(
+    "/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static"
+)
 
 
 @app.middleware("http")

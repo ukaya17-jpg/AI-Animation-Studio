@@ -28,6 +28,7 @@ _CHARACTERS: tuple[EpisodeCharacter, ...] = (
             tone="sıcak, öğretmen edası",
             catchphrase="Hadi birlikte keşfedelim!",
         ),
+        image_url="/static/characters/zeytin.png",
     ),
     EpisodeCharacter(
         character_id="findik",
@@ -46,6 +47,7 @@ _CHARACTERS: tuple[EpisodeCharacter, ...] = (
             tone="neşeli, enerjik, çocuksu",
             catchphrase="Paylaşınca daha lezzetli oluyor!",
         ),
+        image_url="/static/characters/findik.png",
     ),
     EpisodeCharacter(
         character_id="minik",
@@ -64,6 +66,7 @@ _CHARACTERS: tuple[EpisodeCharacter, ...] = (
             tone="nazik, kırılgan ama sıcak",
             catchphrase="Sanırım... deneyebilirim!",
         ),
+        image_url="/static/characters/minik.png",
     ),
     EpisodeCharacter(
         character_id="boncuk",
@@ -82,6 +85,7 @@ _CHARACTERS: tuple[EpisodeCharacter, ...] = (
             tone="güven verici, babacan/ablacan sıcaklığında",
             catchphrase="Birlikte taşırsak, yük hafifler.",
         ),
+        image_url="/static/characters/boncuk.png",
     ),
     EpisodeCharacter(
         character_id="papatya",
@@ -100,6 +104,7 @@ _CHARACTERS: tuple[EpisodeCharacter, ...] = (
             tone="pozitif, enerjik, düzenli",
             catchphrase="Bir, iki, üç... birlikte daha güçlüyüz!",
         ),
+        image_url="/static/characters/papatya.png",
     ),
 )
 
@@ -112,12 +117,14 @@ _LOCATIONS: tuple[EpisodeLocation, ...] = (
             "Ormanın ortasında duran, kovuğunda Zeytin'in yaşadığı, gövdesinde "
             "herkesin toplandığı dev bir meşe ağacı."
         ),
+        image_url="/static/locations/buyuk_mese.png",
     ),
     EpisodeLocation(
         location_id="gokkusagi_nehri",
         name="Gökkuşağı Nehri",
         type="Doğa / Keşif Alanı",
         description="Berrak, ışıltılı bir nehir. Doğa ve bilim temalı bölümler burada geçer.",
+        image_url="/static/locations/gokkusagi_nehri.png",
     ),
     EpisodeLocation(
         location_id="paylasim_bahcesi",
@@ -126,6 +133,7 @@ _LOCATIONS: tuple[EpisodeLocation, ...] = (
         description=(
             "Herkesin birlikte sebze-meyve yetiştirdiği, hasadı paylaştığı ortak bahçe."
         ),
+        image_url="/static/locations/paylasim_bahcesi.png",
     ),
     EpisodeLocation(
         location_id="yildiz_tepesi",
@@ -135,6 +143,7 @@ _LOCATIONS: tuple[EpisodeLocation, ...] = (
             "Ormanın en yüksek noktası, gece yıldızların net göründüğü bir tepe. "
             "Bölümler burada kapanır."
         ),
+        image_url="/static/locations/yildiz_tepesi.png",
     ),
 )
 

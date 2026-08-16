@@ -10,21 +10,42 @@ export function EpisodeSummary({ episode }: EpisodeSummaryProps) {
       </p>
       <h2 className="mt-1 text-2xl font-semibold text-slate-100">{episode.title}</h2>
       <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div>
-          <dt className="text-xs uppercase tracking-wide text-slate-500">Ana Karakter</dt>
-          <dd className="mt-1 text-sm font-medium text-slate-200">
-            {episode.lead_character.name} ({episode.lead_character.species})
-          </dd>
+        <div className="flex items-center gap-3">
+          <img
+            src={episode.lead_character.image_url}
+            alt={episode.lead_character.name}
+            className="h-12 w-12 shrink-0 rounded-full border border-slate-700 object-cover"
+          />
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-slate-500">Ana Karakter</dt>
+            <dd className="mt-1 text-sm font-medium text-slate-200">
+              {episode.lead_character.name} ({episode.lead_character.species})
+            </dd>
+          </div>
         </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wide text-slate-500">Destek Karakter</dt>
-          <dd className="mt-1 text-sm font-medium text-slate-200">
-            {episode.support_character.name} ({episode.support_character.species})
-          </dd>
+        <div className="flex items-center gap-3">
+          <img
+            src={episode.support_character.image_url}
+            alt={episode.support_character.name}
+            className="h-12 w-12 shrink-0 rounded-full border border-slate-700 object-cover"
+          />
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-slate-500">Destek Karakter</dt>
+            <dd className="mt-1 text-sm font-medium text-slate-200">
+              {episode.support_character.name} ({episode.support_character.species})
+            </dd>
+          </div>
         </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wide text-slate-500">Mekan</dt>
-          <dd className="mt-1 text-sm font-medium text-slate-200">{episode.location.name}</dd>
+        <div className="flex items-center gap-3">
+          <img
+            src={episode.location.image_url}
+            alt={episode.location.name}
+            className="h-12 w-16 shrink-0 rounded-md border border-slate-700 object-cover"
+          />
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-slate-500">Mekan</dt>
+            <dd className="mt-1 text-sm font-medium text-slate-200">{episode.location.name}</dd>
+          </div>
         </div>
       </dl>
       <p className="mt-4 text-xs text-slate-500">

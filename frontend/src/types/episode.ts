@@ -1,6 +1,9 @@
 export type ThemeSummary = {
   theme_id: string
   label: string
+  lead_character_image_url: string
+  support_character_image_url: string
+  location_image_url: string
 }
 
 export type VoiceProfile = {
@@ -19,6 +22,7 @@ export type EpisodeCharacter = {
   personality: string[]
   visual_description: string
   voice: VoiceProfile
+  image_url: string
 }
 
 export type EpisodeLocation = {
@@ -26,6 +30,7 @@ export type EpisodeLocation = {
   name: string
   type: string
   description: string
+  image_url: string
 }
 
 export type EpisodeScene = {

@@ -14,10 +14,13 @@ class EpisodeGenerateRequest(BaseModel):
 
 
 class ThemeSummaryResponse(BaseModel):
-    """A theme's id and Turkish label, for populating a theme picker."""
+    """A theme's id, Turkish label, and cast/location images, for a theme picker."""
 
     theme_id: str
     label: str
+    lead_character_image_url: str
+    support_character_image_url: str
+    location_image_url: str
 
 
 class EpisodeResponse(BaseModel):

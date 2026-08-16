@@ -27,6 +27,7 @@ class EpisodeCharacter:
     personality: tuple[str, ...]
     visual_description: str
     voice: VoiceProfile
+    image_url: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +38,7 @@ class EpisodeLocation:
     name: str
     type: str
     description: str
+    image_url: str
 
 
 @dataclass(frozen=True, slots=True)

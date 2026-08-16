@@ -12,7 +12,11 @@ async def test_list_themes_endpoint_returns_all_nine_themes() -> None:
     assert response.status_code == 200
     body = response.json()
     assert len(body) == 9
-    assert {"theme_id": "paylasma", "label": "Paylaşma"} in body
+    paylasma = next(item for item in body if item["theme_id"] == "paylasma")
+    assert paylasma["label"] == "Paylaşma"
+    assert paylasma["lead_character_image_url"] == "/static/characters/findik.png"
+    assert paylasma["support_character_image_url"] == "/static/characters/boncuk.png"
+    assert paylasma["location_image_url"] == "/static/locations/paylasim_bahcesi.png"
 
 
 async def test_generate_episode_endpoint_returns_episode_seo_and_shorts() -> None:
