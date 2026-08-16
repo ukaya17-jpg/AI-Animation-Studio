@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -57,6 +59,29 @@ class ShortsPlanResponse(BaseModel):
 class EpisodeGenerationResponse(BaseModel):
     """Combined output of the episode, SEO, and Shorts generation services."""
 
+    id: uuid.UUID
     episode: EpisodeResponse
     seo: SeoPackageResponse
     shorts: ShortsPlanResponse
+
+
+class GeneratedEpisodeSummaryResponse(BaseModel):
+    """One row of the persisted-episode history list."""
+
+    id: uuid.UUID
+    title: str
+    theme_id: str
+    theme_label: str
+    lead_character_image_url: str
+    support_character_image_url: str
+    location_image_url: str
+    created_at: datetime
+
+
+class GeneratedEpisodeListResponse(BaseModel):
+    """One newest-first page of persisted episode summaries."""
+
+    items: list[GeneratedEpisodeSummaryResponse]
+    total: int
+    page: int
+    page_size: int

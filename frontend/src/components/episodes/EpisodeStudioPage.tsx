@@ -1,12 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { LoadingState } from '../LoadingState'
+import { EpisodeHistoryList } from './EpisodeHistoryList'
 import { EpisodeSummary } from './EpisodeSummary'
 import { LessonBox } from './LessonBox'
 import { SceneCard } from './SceneCard'
 import { SeoPanel } from './SeoPanel'
 import { ShortsPanel } from './ShortsPanel'
-import { fetchThemes, generateEpisode, toFriendlyErrorMessage } from '../../lib/episodesApi'
-import type { EpisodeGenerationResult, ThemeSummary } from '../../types/episode'
+import {
+  fetchGeneratedEpisode,
+  fetchGeneratedEpisodes,
+  fetchThemes,
+  generateEpisode,
+  toFriendlyErrorMessage,
+} from '../../lib/episodesApi'
+import type { EpisodeGenerationResult, GeneratedEpisodeSummary, ThemeSummary } from '../../types/episode'
 import { ThemePicker } from './ThemePicker'
 
 export function EpisodeStudioPage() {
@@ -15,9 +22,27 @@ export function EpisodeStudioPage() {
   const [themesError, setThemesError] = useState<string | null>(null)
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null)
 
+  const [history, setHistory] = useState<GeneratedEpisodeSummary[]>([])
+  const [historyLoading, setHistoryLoading] = useState(true)
+  const [historyError, setHistoryError] = useState<string | null>(null)
+  const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(null)
+
   const [result, setResult] = useState<EpisodeGenerationResult | null>(null)
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState<string | null>(null)
+
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true)
+    setHistoryError(null)
+    try {
+      const data = await fetchGeneratedEpisodes()
+      setHistory(data.items)
+    } catch {
+      setHistoryError('Geçmiş bölümler yüklenirken bir hata oluştu.')
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -39,6 +64,10 @@ export function EpisodeStudioPage() {
     }
   }, [])
 
+  useEffect(() => {
+    void loadHistory()
+  }, [loadHistory])
+
   async function handleGenerate() {
     if (!selectedThemeId) return
     setGenerating(true)
@@ -46,9 +75,25 @@ export function EpisodeStudioPage() {
     try {
       const data = await generateEpisode(selectedThemeId)
       setResult(data)
+      setSelectedEpisodeId(data.id)
+      await loadHistory()
     } catch (error) {
       setGenerateError(toFriendlyErrorMessage(error))
       setResult(null)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  async function handleSelectHistoryEpisode(episodeId: string) {
+    setSelectedEpisodeId(episodeId)
+    setGenerateError(null)
+    setGenerating(true)
+    try {
+      const data = await fetchGeneratedEpisode(episodeId)
+      setResult(data)
+    } catch (error) {
+      setGenerateError(toFriendlyErrorMessage(error))
     } finally {
       setGenerating(false)
     }
@@ -123,6 +168,28 @@ export function EpisodeStudioPage() {
           </div>
         </div>
       )}
+
+      <div className="mt-12">
+        <h2 className="text-xl font-semibold text-slate-100">Geçmiş Bölümler</h2>
+        <p className="mt-1 text-sm text-slate-400">
+          Daha önce ürettiğin bölümler burada listelenir; birine tıklayarak tekrar açabilirsin.
+        </p>
+        <div className="mt-4">
+          {historyLoading && <LoadingState label="Geçmiş bölümler yükleniyor…" />}
+          {historyError && (
+            <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+              {historyError}
+            </p>
+          )}
+          {!historyLoading && !historyError && (
+            <EpisodeHistoryList
+              episodes={history}
+              selectedEpisodeId={selectedEpisodeId}
+              onSelect={(episodeId) => void handleSelectHistoryEpisode(episodeId)}
+            />
+          )}
+        </div>
+      </div>
     </section>
   )
 }

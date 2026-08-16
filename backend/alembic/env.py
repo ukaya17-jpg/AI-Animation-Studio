@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.core.config import get_settings
 from app.database.base import Base
+from app.models import generated_episode  # noqa: F401  registers ORM models on Base.metadata
 
 config = context.config
 config.set_main_option("sqlalchemy.url", get_settings().database_url)

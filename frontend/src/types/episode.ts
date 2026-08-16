@@ -73,7 +73,26 @@ export type ShortsPlan = {
 }
 
 export type EpisodeGenerationResult = {
+  id: string
   episode: Episode
   seo: SeoPackage
   shorts: ShortsPlan
+}
+
+export type GeneratedEpisodeSummary = {
+  id: string
+  title: string
+  theme_id: string
+  theme_label: string
+  lead_character_image_url: string
+  support_character_image_url: string
+  location_image_url: string
+  created_at: string
+}
+
+export type GeneratedEpisodeList = {
+  items: GeneratedEpisodeSummary[]
+  total: number
+  page: number
+  page_size: number
 }
