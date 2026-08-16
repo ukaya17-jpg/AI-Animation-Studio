@@ -3,12 +3,12 @@ import uuid
 import httpx
 
 
-async def test_list_themes_endpoint_returns_all_nine_themes(client: httpx.AsyncClient) -> None:
+async def test_list_themes_endpoint_returns_all_twenty_themes(client: httpx.AsyncClient) -> None:
     response = await client.get("/episodes/themes")
 
     assert response.status_code == 200
     body = response.json()
-    assert len(body) == 9
+    assert len(body) == 20
     paylasma = next(item for item in body if item["theme_id"] == "paylasma")
     assert paylasma["label"] == "Paylaşma"
     assert paylasma["lead_character_image_url"] == "/static/characters/findik.png"

@@ -244,6 +244,118 @@ _THEMES: tuple[EpisodeTheme, ...] = (
             "anlatabilmektir."
         ),
     ),
+    EpisodeTheme(
+        theme_id="durustluk",
+        label="Dürüstlük",
+        lead_character_id="zeytin",
+        support_character_id="findik",
+        location_id="buyuk_mese",
+        lesson=(
+            "Küçük bir yalan bile arkadaşlığı kırabilir; doğruyu söylemek başta zor "
+            "gelse de içimizi hep rahatlatır."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="sabir",
+        label="Sabır",
+        lead_character_id="papatya",
+        support_character_id="zeytin",
+        location_id="paylasim_bahcesi",
+        lesson=(
+            "Güzel şeyler zamanla büyür; sabırla beklemeyi öğrenmek, sonunda en "
+            "tatlı meyveyi toplamamızı sağlar."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="nezaket",
+        label="Nezaket",
+        lead_character_id="findik",
+        support_character_id="minik",
+        location_id="buyuk_mese",
+        lesson="Küçük bir nazik söz veya davranış, bir günü baştan sona güzelleştirebilir.",
+    ),
+    EpisodeTheme(
+        theme_id="ozguven",
+        label="Özgüven",
+        lead_character_id="minik",
+        support_character_id="papatya",
+        location_id="yildiz_tepesi",
+        lesson=(
+            "Herkesin kendine güvenmesi gereken bir yıldızı vardır; önemli olan o "
+            "ışığı görebilmektir."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="sorumluluk",
+        label="Sorumluluk",
+        lead_character_id="boncuk",
+        support_character_id="findik",
+        location_id="buyuk_mese",
+        lesson=(
+            "Üstlendiğimiz küçük bir görevi bile tamamlamak, bize ve etrafımızdakilere "
+            "güven verir."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="empati",
+        label="Empati",
+        lead_character_id="zeytin",
+        support_character_id="minik",
+        location_id="yildiz_tepesi",
+        lesson="Bir başkasının yerine geçip onun gözünden bakmak, en büyük anlayış hediyesidir.",
+    ),
+    EpisodeTheme(
+        theme_id="duzen",
+        label="Düzen ve Temizlik",
+        lead_character_id="papatya",
+        support_character_id="boncuk",
+        location_id="buyuk_mese",
+        lesson=(
+            "Etrafımızı düzenli tutmak, hem bizim hem de birlikte yaşadığımız "
+            "arkadaşlarımızın işini kolaylaştırır."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="saglikli_beslenme",
+        label="Sağlıklı Beslenme",
+        lead_character_id="findik",
+        support_character_id="papatya",
+        location_id="paylasim_bahcesi",
+        lesson=(
+            "Renkli ve doğal besinler seçmek, güçlü ve enerjik kalmamızın en lezzetli "
+            "yoludur."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="cevre_sevgisi",
+        label="Doğayı Koruma",
+        lead_character_id="zeytin",
+        support_character_id="boncuk",
+        location_id="gokkusagi_nehri",
+        lesson="Doğa bize ev sahipliği yapar; onu temiz ve güvende tutmak hepimizin görevidir.",
+    ),
+    EpisodeTheme(
+        theme_id="yaraticilik",
+        label="Yaratıcılık",
+        lead_character_id="boncuk",
+        support_character_id="minik",
+        location_id="gokkusagi_nehri",
+        lesson=(
+            "Bir sorunu çözmenin her zaman birden fazla yolu vardır; hayal gücümüzü "
+            "kullanmaktan çekinmemeliyiz."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="farkliliklara_saygi",
+        label="Farklılıklara Saygı",
+        lead_character_id="findik",
+        support_character_id="zeytin",
+        location_id="paylasim_bahcesi",
+        lesson=(
+            "Herkesin farklı olması ormanı daha da renkli ve güzel yapar; "
+            "farklılıklarımızla birbirimizi tamamlarız."
+        ),
+    ),
 )
 
 
