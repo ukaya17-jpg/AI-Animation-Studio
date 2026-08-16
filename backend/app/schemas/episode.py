@@ -13,6 +13,13 @@ class EpisodeGenerateRequest(BaseModel):
     theme_id: str = Field(min_length=1, max_length=100)
 
 
+class ThemeSummaryResponse(BaseModel):
+    """A theme's id and Turkish label, for populating a theme picker."""
+
+    theme_id: str
+    label: str
+
+
 class EpisodeResponse(BaseModel):
     """Transport-safe representation of a generated episode script."""
 

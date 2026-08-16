@@ -23,6 +23,13 @@ class EpisodeService:
         self._seo = seo or EpisodeSeoService()
         self._shorts = shorts or EpisodeShortsService()
 
+    def list_themes(self) -> list[dict[str, str]]:
+        """Return every theme's id and Turkish label, in catalog order."""
+        return [
+            {"theme_id": theme.theme_id, "label": theme.label}
+            for theme in self._generator.list_themes()
+        ]
+
     def generate(self, theme_id: str) -> dict[str, Any]:
         """Generate an episode script plus its SEO package and Shorts cut."""
         episode = self._generator.generate(theme_id)

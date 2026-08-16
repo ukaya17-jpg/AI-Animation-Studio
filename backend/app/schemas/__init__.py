@@ -6,6 +6,7 @@ from app.schemas.episode import (
     EpisodeResponse,
     SeoPackageResponse,
     ShortsPlanResponse,
+    ThemeSummaryResponse,
 )
 from app.schemas.storyboard import StoryboardCreateRequest, StoryboardResponse
 
@@ -17,4 +18,5 @@ __all__ = [
     "ShortsPlanResponse",
     "StoryboardCreateRequest",
     "StoryboardResponse",
+    "ThemeSummaryResponse",
 ]

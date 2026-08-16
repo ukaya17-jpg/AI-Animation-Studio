@@ -9,11 +9,18 @@ from app.models.episode_cast import EpisodeCharacter, EpisodeLocation
 
 @dataclass(frozen=True, slots=True)
 class EpisodeScene:
-    """One beat of the fixed five-scene episode structure."""
+    """One beat of the fixed five-scene episode structure.
+
+    ``speaker``/``dialogue`` are set only when the scene carries an actual
+    quoted line, so a UI can render narration and character speech
+    distinctly instead of parsing quotes out of free text.
+    """
 
     name: str
     duration_seconds: int
     text: str
+    speaker: str | None = None
+    dialogue: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

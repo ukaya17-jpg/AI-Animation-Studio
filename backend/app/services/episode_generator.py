@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.models.episode import Episode, EpisodeScene
+from app.models.episode_cast import EpisodeTheme
 from app.services.content_bank import ContentBank
 from app.services.turkish_suffix import to_dative, to_genitive
 
@@ -18,6 +19,10 @@ class EpisodeGeneratorService:
 
     def __init__(self, content_bank: ContentBank | None = None) -> None:
         self._content_bank = content_bank or ContentBank()
+
+    def list_themes(self) -> list[EpisodeTheme]:
+        """Return every theme this generator can produce an episode for."""
+        return self._content_bank.list_themes()
 
     def generate(self, theme_id: str) -> Episode:
         """Build the five-scene episode for the given theme id.
@@ -39,14 +44,16 @@ class EpisodeGeneratorService:
                 duration_seconds=self.OPENING_SECONDS,
                 text=(
                     f"{lead.name}, güzel bir sabah {to_dative(location.name)} gelir ve "
-                    f'arkadaşlarını selamlar. "{lead.voice.catchphrase}"'
+                    "arkadaşlarını selamlar."
                 ),
+                speaker=lead.name,
+                dialogue=lead.voice.catchphrase,
             ),
             EpisodeScene(
                 name="Sorun",
                 duration_seconds=self.PROBLEM_SECONDS,
                 text=(
-                    f'{lead.name}, "{theme.label}" ile ilgili beklenmedik bir sorunla '
+                    f"{lead.name}, {theme.label.lower()} ile ilgili beklenmedik bir sorunla "
                     "karşılaşır ve ne yapacağını bilemez."
                 ),
             ),
@@ -69,10 +76,11 @@ class EpisodeGeneratorService:
             EpisodeScene(
                 name="Kapanış",
                 duration_seconds=self.CLOSING_SECONDS,
-                text=(
-                    f'{lead.name}: "{theme.lesson} Sence sen de bunu deneyebilir misin? '
-                    "Bize yorumlarda anlat! Neşeli Orman'a abone olmayı ve zil simgesine "
-                    'tıklamayı unutma!"'
+                text=f"{lead.name}, bölümü kapatırken izleyicilere son mesajını iletir.",
+                speaker=lead.name,
+                dialogue=(
+                    f"{theme.lesson} Sence sen de bunu deneyebilir misin? Bize yorumlarda "
+                    "anlat! Neşeli Orman'a abone olmayı ve zil simgesine tıklamayı unutma!"
                 ),
             ),
         )

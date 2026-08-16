@@ -3,10 +3,26 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.dependencies import get_episode_service
-from app.schemas.episode import EpisodeGenerateRequest, EpisodeGenerationResponse
+from app.schemas.episode import (
+    EpisodeGenerateRequest,
+    EpisodeGenerationResponse,
+    ThemeSummaryResponse,
+)
 from app.services.episode_service import EpisodeService
 
 router = APIRouter(prefix="/episodes")
+
+
+@router.get(
+    "/themes",
+    response_model=list[ThemeSummaryResponse],
+    summary="List the fixed Neşeli Orman themes available for generation",
+)
+async def list_themes(
+    service: EpisodeService = Depends(get_episode_service),  # noqa: B008
+) -> list[ThemeSummaryResponse]:
+    """Return every theme id and label the generation endpoint accepts."""
+    return [ThemeSummaryResponse.model_validate(theme) for theme in service.list_themes()]
 
 
 @router.post(

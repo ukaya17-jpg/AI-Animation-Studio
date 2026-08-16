@@ -3,6 +3,18 @@ import httpx
 from app.main import app
 
 
+async def test_list_themes_endpoint_returns_all_nine_themes() -> None:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+    ) as client:
+        response = await client.get("/episodes/themes")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 9
+    assert {"theme_id": "paylasma", "label": "Paylaşma"} in body
+
+
 async def test_generate_episode_endpoint_returns_episode_seo_and_shorts() -> None:
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://testserver"
