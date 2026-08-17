@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173"
     trusted_hosts: str = "localhost,127.0.0.1,testserver,backend"
     force_https: bool = False
+    rate_limit_enabled: bool = False
     app_secret_key: SecretStr = SecretStr("development-only-secret-change-me")
     database_url: str = "postgresql+asyncpg://app_user:change-me@localhost:5432/ai_animation_studio"
     redis_url: str = "redis://localhost:6379/0"

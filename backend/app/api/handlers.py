@@ -17,3 +17,8 @@ async def unhandled_exception_handler(_: Request, exception: Exception) -> JSONR
     """Log unexpected failures without disclosing internal implementation details."""
     logger.exception("Unhandled API exception", exc_info=exception)
     return JSONResponse(status_code=500, content={"detail": "Internal server error."})
+
+
+async def too_many_requests_handler(_: Request, exception: Exception) -> JSONResponse:
+    """Expose a safe, actionable response when a client exceeds its rate-limit quota."""
+    return JSONResponse(status_code=429, content={"detail": str(exception)})

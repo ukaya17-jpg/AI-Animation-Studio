@@ -8,11 +8,15 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from app.api.handlers import service_unavailable_handler, unhandled_exception_handler
+from app.api.handlers import (
+    service_unavailable_handler,
+    too_many_requests_handler,
+    unhandled_exception_handler,
+)
 from app.api.middleware import RequestHandler, add_request_id, enforce_rate_limit
 from app.api.router import api_router
 from app.core.config import get_settings
-from app.core.exceptions import ServiceUnavailableError
+from app.core.exceptions import ServiceUnavailableError, TooManyRequestsError
 from app.core.logging import configure_logging
 from app.database.redis import close_redis_client
 from app.database.session import close_database
@@ -47,6 +51,7 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_host_li
 if settings.force_https:
     app.add_middleware(HTTPSRedirectMiddleware)
 app.add_exception_handler(ServiceUnavailableError, service_unavailable_handler)
+app.add_exception_handler(TooManyRequestsError, too_many_requests_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
 app.include_router(api_router)
 app.mount(
