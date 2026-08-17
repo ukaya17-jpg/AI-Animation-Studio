@@ -30,7 +30,7 @@ test('register, generate an episode, save it to a project, and see it on /projec
   await expect(page.getByRole('radiogroup', { name: 'Tema seç' })).toBeVisible()
   await page.getByLabel(`Bu bölümü projeme kaydet (${projectName})`).check()
   await page.getByRole('button', { name: 'Bölüm Üret' }).click()
-  await expect(page.getByRole('heading', { name: 'Sahneler' })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('heading', { name: 'Sahneler' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Projects' }).click()
   const projectCard = page.locator('li', { has: page.getByRole('heading', { name: projectName }) })
@@ -50,7 +50,10 @@ test('logging out clears the session and hides project-only content', async ({ p
   await expect(page).toHaveURL(/\/projects$/)
 
   await page.getByRole('button', { name: 'Çıkış Yap' }).click()
-  await expect(page.getByRole('link', { name: 'Giriş Yap' })).toBeVisible()
+  // Exact match: by default getByRole name-matching is a case-insensitive
+  // substring match, and "giriş yapmalısın" (the /projects logged-out hint,
+  // rendered below) contains "giriş yap" too.
+  await expect(page.getByRole('link', { name: 'Giriş Yap', exact: true })).toBeVisible()
 
   await page.getByRole('link', { name: 'Projects' }).click()
   await expect(page.getByText('giriş yapmalısın')).toBeVisible()

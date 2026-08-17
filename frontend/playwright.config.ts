@@ -8,12 +8,14 @@ import { defineConfig } from '@playwright/test'
 // backend/database for this flow to exercise.
 export default defineConfig({
   testDir: './tests/e2e',
-  timeout: 30_000,
+  // Generous relative to a typical CI runner: the target is Vite's dev
+  // server (unbundled, many small requests) plus a full register → generate
+  // → save → verify flow across several real network round trips.
+  timeout: 60_000,
   fullyParallel: false,
-  retries: 0,
-  // The target is Vite's (unbundled, many-small-requests) dev server rather
-  // than a production build, so the default 5s assertion timeout is tight.
-  expect: { timeout: 10_000 },
+  retries: process.env.CI ? 1 : 0,
+  reporter: [['list'], ['html', { open: 'never' }]],
+  expect: { timeout: 20_000 },
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173',
     trace: 'retain-on-failure',
