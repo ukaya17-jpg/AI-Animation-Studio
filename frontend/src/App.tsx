@@ -28,17 +28,17 @@ export default function App() {
       <header className="border-b border-slate-800 px-6 py-5">
         <p className="text-xl font-semibold tracking-tight">AI Animation Studio</p>
       </header>
-      <div className="flex">
+      <div className="flex flex-col md:flex-row">
         <nav
-          className="min-h-[calc(100vh-73px)] w-56 border-r border-slate-800 p-4"
+          className="border-b border-slate-800 p-2 md:min-h-[calc(100vh-73px)] md:w-56 md:border-b-0 md:border-r md:p-4"
           aria-label="Main navigation"
         >
-          <ul className="space-y-1">
+          <ul className="flex gap-1 overflow-x-auto md:flex-col md:space-y-1 md:overflow-visible">
             {navigation.map((item) => (
-              <li key={item.path}>
+              <li key={item.path} className="shrink-0">
                 <NavLink
                   className={({ isActive }) =>
-                    `block rounded-md px-3 py-2 text-sm ${
+                    `block whitespace-nowrap rounded-md px-3 py-2 text-sm ${
                       isActive ? 'bg-indigo-500 text-white' : 'text-slate-300 hover:bg-slate-800'
                     }`
                   }
@@ -50,7 +50,7 @@ export default function App() {
             ))}
           </ul>
         </nav>
-        <main className="p-8">
+        <main className="min-w-0 flex-1 p-4 sm:p-6 md:p-8">
           <Routes>
             <Route path="/" element={<PlaceholderPage title="Dashboard" />} />
             <Route path="/projects" element={<PlaceholderPage title="Projects" />} />
