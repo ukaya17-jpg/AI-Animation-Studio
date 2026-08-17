@@ -455,3 +455,35 @@ auth'a yönelik.
     header göndermek için güncelledim — bunlar önceden auth'suz
     çalışıyordu, şimdi 401 alacaklardı; davranış kasıtlı olarak
     sıkılaştırıldığı için testler de buna uyarlandı, regresyon değil.
+
+## [2026-08-17 04:00 UTC] Görev B: Docker migration otomasyonu
+- Durum: tamamlandı
+- Commit: `3f7b2a0` Docker: backend container'ı başlarken migration'ları
+  otomatik uygula
+- Test sonucu: backend 110/110, ruff+mypy --strict temiz, frontend
+  lint+build temiz; ayrıca görevin kendi istediği doğrulama yöntemiyle
+  (`docker compose down -v` + sıfırdan `up --build`) gerçek Docker'da
+  uçtan uca doğrulandı
+- Notlar:
+  - `docker/backend-entrypoint.sh` eklendi (`set -eu`, önce
+    `alembic upgrade head`, başarısızsa exit non-zero, başarılıysa
+    `exec uvicorn ...`). Dockerfile'ın `CMD`'si yerine `ENTRYPOINT`
+    olarak bağlandı.
+  - Doğrulama tam olarak görevin istediği gibi yapıldı: önce
+    `docker compose down -v` ile postgres/redis volume'leri de dahil
+    silindi, sonra `docker compose up --build` ile sıfırdan ayağa
+    kaldırıldı. Loglarda 4 migration'ın (`afe976b06519` →
+    `2d5160e78e57` → `5d693758d125` → `138b97962810`) otomatik ve
+    sırayla uygulandığı görüldü. İLK denemede (hiç elle migration
+    çalıştırmadan): `POST /auth/register` → 201, `GET /episodes` → 200
+    (boş liste, beklenen — volume yeni). Ayrıca bu turda eklenen Görev
+    A'nın (project_id sahiplik kontrolü) gerçek stack'te de doğru
+    çalıştığını gördüm: auth'suz `GET /episodes?project_id=...` → 401.
+  - Doğrulama sonrası bu kez `docker compose down` (volume'ler
+    SİLİNMEDİ) ile kapatıldı — artık migration'lar otomatik
+    olduğundan volume'ü korumanın bir riski yok.
+  - README'nin "Docker" bölümüne migration'ın otomatik olduğu ve
+    başarısızlıkta container'ın düzgün hata ile çıktığı not düşüldü;
+    "Installation" (lokal, Docker'sız) bölümüne de `alembic upgrade
+    head` adımı eklendi — orada hiç yoktu, aynı boşluğun lokal
+    geliştirmede de yaşanmaması için.
