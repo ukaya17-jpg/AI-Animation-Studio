@@ -383,3 +383,36 @@ eklenir.
      kullandım, ama gelecekte lokal test çalıştıran biri aynı tuzağa
      düşebilir. Kalıcı bir çözüm (ör. testler için ayrı bir
      `.env.test` veya pytest'in `.env`'i hiç okumaması) değerlendirilebilir.
+
+## [2026-08-17 03:20 UTC] Oturum sonrası ek doğrulama: `docker compose up --build`
+Kullanıcı isteğiyle platformun gerçekten sorunsuz ayağa kalktığını
+doğrulamak için `docker compose up --build -d` çalıştırıldı.
+- `GET /health` ve `GET /health/ready` → ikisi de `200`, `dependencies:
+  {"database": true, "redis": true}`.
+- **Bulgu (bu oturumdan önce de var olan bir boşluk, benim
+  eklediğim bir regresyon değil):** `docker/backend.Dockerfile`'ın
+  `CMD`'si sadece `uvicorn`'u başlatıyor, `alembic upgrade head`'i hiç
+  çalıştırmıyor. Taze bir `docker compose up --build` sonrası
+  `POST /auth/register` ve `GET /episodes` gibi tablolara dokunan
+  her endpoint `500` (`UndefinedTableError`/`UndefinedColumnError`)
+  veriyordu — migration'lar elle uygulanana kadar. `docker compose
+  exec backend python -m alembic upgrade head` çalıştırılınca (bu
+  oturumdaki 4 migration da dahil) her şey düzeldi: register `201`,
+  `GET /episodes` `200` ve daha önceki bir oturumdan kalma 2 kayıtlı
+  bölümü döndürdü (kalıcı `postgres_data` Docker volume'ünden —
+  demek ki `afe976b06519` migration'ı daha önce elle uygulanmış ama
+  bu oturumda eklenen 3 migration hiç uygulanmamıştı).
+  Bu makinede test amaçlı `test2@example.com` diye bir kullanıcı
+  oluşturuldu (kalıcı volume'de kaldı, dev/test verisi, silmedim).
+- **Sonuç:** `/health`/`/health/ready` "platform ayakta" derken bile,
+  auth/proje/bölüm endpoint'leri migration'lar elle çalıştırılmadan
+  `500` veriyor. Bu, gözden geçirilmesi gereken 6. kritik nokta olarak
+  eklenmeli: ya `docker/backend.Dockerfile`'ın `CMD`'sine (veya bir
+  entrypoint script'ine) `alembic upgrade head && uvicorn ...` gibi bir
+  adım eklenmeli, ya da en azından README'ye "`docker compose up`'tan
+  sonra `docker compose exec backend python -m alembic upgrade head`
+  çalıştırın" notu eklenmeli. Bu oturumda bunu düzeltmedim çünkü
+  kullanıcı doğrulama istedi, görev listesine ekli değildi — ama
+  gelecek oturum için net bir aday.
+- Doğrulama sonrası `docker compose down` (volume'ler SİLİNMEDİ,
+  `-v` kullanılmadı) ile temiz bir şekilde kapatıldı.
