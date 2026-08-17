@@ -12,7 +12,7 @@ The `events`, `tasks`, `workers`, `cache`, `media`, `storage`, `prompts`, `adapt
 
 1. Trusted-host and optional HTTPS middleware validate the request boundary.
 2. A request ID is created or propagated and attached to structured logs and the response.
-3. The rate-limit hook runs before routes. It is still a no-op (`NoopRateLimiter`); a Redis-backed policy remains unscheduled.
+3. The rate-limit hook runs before routes. A Redis-backed, fixed-window `RedisRateLimiter` is available (`app/core/rate_limit.py`) — a tight budget for `/auth/login` and `/auth/register`, a looser default for everything else — but it stays opt-in behind `RATE_LIMIT_ENABLED` (default `false`, i.e. `NoopRateLimiter`) so local dev, tests, and CI never need a live Redis connection.
 4. Routes resolve services through dependency injection; `get_current_user` (added in Sprint 2) resolves a bearer JWT into a `User` for endpoints that require authentication.
 5. Lifespan shutdown disposes SQLAlchemy connections and Redis clients.
 

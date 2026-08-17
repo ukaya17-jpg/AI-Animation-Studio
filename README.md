@@ -8,6 +8,7 @@ AI Animation Studio is a scalable foundation for creating, managing, and deliver
 - **Character and location reference art:** every character and location carries a static reference image, shown in the theme picker, generation results, and history list, with meaningful alt text for screen readers.
 - **Authentication and projects:** email/password registration and login (bcrypt-hashed passwords, JWT bearer access tokens), and a `Project` model so a user can eventually group episodes into channels. Generated episodes optionally attach to a project via `project_id`.
 - **Accessible, responsive UI:** loading and error states on every network call, a mobile-safe layout down to 375px, and semantic ARIA roles (`radiogroup`, `status`, `aria-live`) where they matter.
+- **Optional rate limiting:** a Redis-backed, fixed-window limiter (tight on `/auth/login`/`/auth/register`, looser elsewhere) is ready to go behind `RATE_LIMIT_ENABLED=true`; it stays off by default so local dev and CI never need a live Redis connection.
 
 ## Technology stack
 
