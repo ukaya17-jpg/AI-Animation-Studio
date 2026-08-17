@@ -74,6 +74,7 @@ export type ShortsPlan = {
 
 export type EpisodeGenerationResult = {
   id: string
+  project_id: string | null
   episode: Episode
   seo: SeoPackage
   shorts: ShortsPlan
@@ -81,6 +82,7 @@ export type EpisodeGenerationResult = {
 
 export type GeneratedEpisodeSummary = {
   id: string
+  project_id: string | null
   title: string
   theme_id: string
   theme_label: string

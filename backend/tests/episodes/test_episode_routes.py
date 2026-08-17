@@ -3,6 +3,18 @@ import uuid
 import httpx
 
 
+async def _create_project(client: httpx.AsyncClient, email: str) -> str:
+    payload = {"email": email, "password": "correct-horse-1"}
+    await client.post("/auth/register", json=payload)
+    login_response = await client.post("/auth/login", json=payload)
+    headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+    project_response = await client.post(
+        "/projects", json={"name": "Neşeli Orman"}, headers=headers
+    )
+    project_id: str = project_response.json()["id"]
+    return project_id
+
+
 async def test_list_themes_endpoint_returns_all_twenty_themes(client: httpx.AsyncClient) -> None:
     response = await client.get("/episodes/themes")
 
@@ -84,6 +96,43 @@ async def test_get_generated_episode_endpoint_returns_404_for_unknown_id(
     response = await client.get(f"/episodes/{uuid.uuid4()}")
 
     assert response.status_code == 404
+
+
+async def test_generate_episode_endpoint_accepts_an_optional_project_id(
+    client: httpx.AsyncClient,
+) -> None:
+    project_id = await _create_project(client, "project-owner@example.com")
+
+    response = await client.post(
+        "/episodes/generate", json={"theme_id": "duygular", "project_id": project_id}
+    )
+
+    assert response.status_code == 201
+    assert response.json()["project_id"] == project_id
+
+
+async def test_generate_episode_endpoint_defaults_project_id_to_null(
+    client: httpx.AsyncClient,
+) -> None:
+    response = await client.post("/episodes/generate", json={"theme_id": "duygular"})
+
+    assert response.status_code == 201
+    assert response.json()["project_id"] is None
+
+
+async def test_list_generated_episodes_filters_by_project_id(client: httpx.AsyncClient) -> None:
+    project_id = await _create_project(client, "filter-owner@example.com")
+    in_project = await client.post(
+        "/episodes/generate", json={"theme_id": "cesaret", "project_id": project_id}
+    )
+    await client.post("/episodes/generate", json={"theme_id": "aile"})
+
+    response = await client.get("/episodes", params={"project_id": project_id})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["id"] == in_project.json()["id"]
 
 
 async def test_delete_generated_episode_endpoint_removes_it(client: httpx.AsyncClient) -> None:

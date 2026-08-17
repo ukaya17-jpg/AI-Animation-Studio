@@ -36,10 +36,16 @@ async def list_themes(
 async def list_generated_episodes(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    project_id: uuid.UUID | None = Query(default=None),  # noqa: B008
     service: EpisodeService = Depends(get_episode_service),  # noqa: B008
 ) -> GeneratedEpisodeListResponse:
-    """Return one newest-first page of previously generated episode summaries."""
-    result = await service.list_generated_episodes(page=page, page_size=page_size)
+    """Return one newest-first page of previously generated episode summaries.
+
+    Pass ``project_id`` to scope the page to episodes generated under that project.
+    """
+    result = await service.list_generated_episodes(
+        page=page, page_size=page_size, project_id=project_id
+    )
     return GeneratedEpisodeListResponse.model_validate(result)
 
 
@@ -55,7 +61,7 @@ async def generate_episode(
 ) -> EpisodeGenerationResponse:
     """Turn a fixed theme id into a full episode script, SEO package, and Shorts cut."""
     try:
-        result = await service.generate(payload.theme_id)
+        result = await service.generate(payload.theme_id, project_id=payload.project_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     return EpisodeGenerationResponse.model_validate(result)

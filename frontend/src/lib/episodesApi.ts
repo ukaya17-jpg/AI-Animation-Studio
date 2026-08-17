@@ -11,9 +11,13 @@ export async function fetchThemes(): Promise<ThemeSummary[]> {
   return response.data
 }
 
-export async function generateEpisode(themeId: string): Promise<EpisodeGenerationResult> {
+export async function generateEpisode(
+  themeId: string,
+  projectId?: string,
+): Promise<EpisodeGenerationResult> {
   const response = await apiClient.post<EpisodeGenerationResult>('/episodes/generate', {
     theme_id: themeId,
+    project_id: projectId,
   })
   return response.data
 }
@@ -21,9 +25,10 @@ export async function generateEpisode(themeId: string): Promise<EpisodeGeneratio
 export async function fetchGeneratedEpisodes(
   page = 1,
   pageSize = 20,
+  projectId?: string,
 ): Promise<GeneratedEpisodeList> {
   const response = await apiClient.get<GeneratedEpisodeList>('/episodes', {
-    params: { page, page_size: pageSize },
+    params: { page, page_size: pageSize, project_id: projectId },
   })
   return response.data
 }

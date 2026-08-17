@@ -49,12 +49,17 @@ class EpisodeService:
             )
         return summaries
 
-    async def generate(self, theme_id: str) -> dict[str, Any]:
-        """Generate an episode script plus its SEO/Shorts package, and persist it."""
+    async def generate(self, theme_id: str, project_id: uuid.UUID | None = None) -> dict[str, Any]:
+        """Generate an episode script plus its SEO/Shorts package, and persist it.
+
+        ``project_id`` is optional: episodes may still be generated standalone,
+        outside of any project.
+        """
         episode = self._generator.generate(theme_id)
         seo = self._seo.generate(episode)
         shorts = self._shorts.generate(episode)
         record = await self._repository.create(
+            project_id=project_id,
             theme_id=episode.theme_id,
             theme_label=episode.theme_label,
             title=episode.title,
@@ -68,9 +73,16 @@ class EpisodeService:
         )
         return self._to_detail(record)
 
-    async def list_generated_episodes(self, *, page: int, page_size: int) -> dict[str, Any]:
-        """Return one newest-first page of persisted episode summaries."""
-        records, total = await self._repository.list_paginated(page=page, page_size=page_size)
+    async def list_generated_episodes(
+        self, *, page: int, page_size: int, project_id: uuid.UUID | None = None
+    ) -> dict[str, Any]:
+        """Return one newest-first page of persisted episode summaries.
+
+        When ``project_id`` is given, the page is scoped to that project only.
+        """
+        records, total = await self._repository.list_paginated(
+            page=page, page_size=page_size, project_id=project_id
+        )
         return {
             "items": [self._to_summary(record) for record in records],
             "total": total,
@@ -97,6 +109,7 @@ class EpisodeService:
         total_duration_seconds = sum(scene["duration_seconds"] for scene in record.scenes)
         return {
             "id": record.id,
+            "project_id": record.project_id,
             "episode": {
                 "theme_id": record.theme_id,
                 "theme_label": record.theme_label,
@@ -119,6 +132,7 @@ class EpisodeService:
         location = self._content_bank.get_location(record.location_id)
         return {
             "id": record.id,
+            "project_id": record.project_id,
             "title": record.title,
             "theme_id": record.theme_id,
             "theme_label": record.theme_label,

@@ -104,3 +104,23 @@ async def test_delete_returns_false_for_an_unknown_id(db_session: AsyncSession) 
     repository = GeneratedEpisodeRepository(db_session)
 
     assert await repository.delete(uuid.uuid4()) is False
+
+
+async def test_create_without_project_id_defaults_to_none(db_session: AsyncSession) -> None:
+    repository = GeneratedEpisodeRepository(db_session)
+
+    record = await repository.create(**_episode_kwargs())
+
+    assert record.project_id is None
+
+
+async def test_list_paginated_filters_by_project_id(db_session: AsyncSession) -> None:
+    repository = GeneratedEpisodeRepository(db_session)
+    project_id = uuid.uuid4()
+    in_project = await repository.create(project_id=project_id, **_episode_kwargs("paylasma"))
+    await repository.create(**_episode_kwargs("aile"))
+
+    rows, total = await repository.list_paginated(page=1, page_size=20, project_id=project_id)
+
+    assert total == 1
+    assert [row.id for row in rows] == [in_project.id]

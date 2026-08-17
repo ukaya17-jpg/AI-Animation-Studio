@@ -13,6 +13,7 @@ class EpisodeGenerateRequest(BaseModel):
     """Validated input accepted by the episode generation endpoint."""
 
     theme_id: str = Field(min_length=1, max_length=100)
+    project_id: uuid.UUID | None = None
 
 
 class ThemeSummaryResponse(BaseModel):
@@ -60,6 +61,7 @@ class EpisodeGenerationResponse(BaseModel):
     """Combined output of the episode, SEO, and Shorts generation services."""
 
     id: uuid.UUID
+    project_id: uuid.UUID | None
     episode: EpisodeResponse
     seo: SeoPackageResponse
     shorts: ShortsPlanResponse
@@ -69,6 +71,7 @@ class GeneratedEpisodeSummaryResponse(BaseModel):
     """One row of the persisted-episode history list."""
 
     id: uuid.UUID
+    project_id: uuid.UUID | None
     title: str
     theme_id: str
     theme_label: str

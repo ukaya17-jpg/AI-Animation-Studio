@@ -30,9 +30,11 @@ class GeneratedEpisodeRepository:
         scenes: list[dict[str, Any]],
         seo_package: dict[str, Any],
         shorts_plan: dict[str, Any],
+        project_id: uuid.UUID | None = None,
     ) -> GeneratedEpisode:
         """Persist a newly generated episode and return the stored row."""
         record = GeneratedEpisode(
+            project_id=project_id,
             theme_id=theme_id,
             theme_label=theme_label,
             title=title,
@@ -54,13 +56,21 @@ class GeneratedEpisodeRepository:
         return await self._session.get(GeneratedEpisode, episode_id)
 
     async def list_paginated(
-        self, *, page: int, page_size: int
+        self, *, page: int, page_size: int, project_id: uuid.UUID | None = None
     ) -> tuple[list[GeneratedEpisode], int]:
-        """Return one newest-first page of episodes, alongside the total row count."""
-        total = await self._session.scalar(select(func.count()).select_from(GeneratedEpisode))
+        """Return one newest-first page of episodes, alongside the total row count.
+
+        When ``project_id`` is given, only episodes linked to that project are counted
+        and returned; episodes generated without a project are otherwise unaffected.
+        """
+        count_query = select(func.count()).select_from(GeneratedEpisode)
+        list_query = select(GeneratedEpisode)
+        if project_id is not None:
+            count_query = count_query.where(GeneratedEpisode.project_id == project_id)
+            list_query = list_query.where(GeneratedEpisode.project_id == project_id)
+        total = await self._session.scalar(count_query)
         rows = await self._session.scalars(
-            select(GeneratedEpisode)
-            .order_by(GeneratedEpisode.created_at.desc())
+            list_query.order_by(GeneratedEpisode.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
