@@ -1,4 +1,9 @@
+import uuid
+
 import httpx
+
+from app.core.config import get_settings
+from app.core.security import create_access_token
 
 
 async def test_register_creates_a_user(client: httpx.AsyncClient) -> None:
@@ -95,3 +100,33 @@ async def test_protected_route_rejects_malformed_token(client: httpx.AsyncClient
     )
 
     assert response.status_code == 401
+
+
+async def test_register_rejects_malformed_json_body(client: httpx.AsyncClient) -> None:
+    response = await client.post(
+        "/auth/register",
+        content=b"{not valid json",
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 422
+
+
+async def test_protected_route_rejects_a_well_formed_token_for_a_deleted_user(
+    client: httpx.AsyncClient,
+) -> None:
+    """A cryptographically valid token whose user no longer exists must still be
+    rejected, not treated as authenticated with a missing user."""
+    token = create_access_token(uuid.uuid4(), get_settings())
+
+    response = await client.get("/projects", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 401
+
+
+async def test_register_rejects_an_overlong_password(client: httpx.AsyncClient) -> None:
+    response = await client.post(
+        "/auth/register", json={"email": "toolong@example.com", "password": "x" * 201}
+    )
+
+    assert response.status_code == 422

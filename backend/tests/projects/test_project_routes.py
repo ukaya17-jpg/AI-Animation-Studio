@@ -49,3 +49,39 @@ async def test_create_project_rejects_blank_name(client: httpx.AsyncClient) -> N
     response = await client.post("/projects", json={"name": ""}, headers=headers)
 
     assert response.status_code == 422
+
+
+async def test_create_project_rejects_a_name_over_the_max_length(
+    client: httpx.AsyncClient,
+) -> None:
+    headers = await _authorized_headers(client, "toolong@example.com")
+
+    response = await client.post("/projects", json={"name": "x" * 201}, headers=headers)
+
+    assert response.status_code == 422
+
+
+async def test_create_project_rejects_malformed_json_body(client: httpx.AsyncClient) -> None:
+    headers = await _authorized_headers(client, "malformed@example.com")
+
+    response = await client.post(
+        "/projects",
+        content=b"{not valid json",
+        headers={**headers, "Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 422
+
+
+async def test_create_project_stores_script_like_name_as_inert_data(
+    client: httpx.AsyncClient,
+) -> None:
+    """A project name is never rendered as HTML server-side; this pins that a
+    markup-shaped name round-trips as plain JSON text, never executed or stripped."""
+    headers = await _authorized_headers(client, "xss@example.com")
+    name = "<script>alert(1)</script>"
+
+    response = await client.post("/projects", json={"name": name}, headers=headers)
+
+    assert response.status_code == 201
+    assert response.json()["name"] == name

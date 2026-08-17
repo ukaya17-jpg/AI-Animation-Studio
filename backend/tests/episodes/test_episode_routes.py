@@ -139,6 +139,55 @@ async def test_list_generated_episodes_filters_by_project_id(client: httpx.Async
     assert body["items"][0]["id"] == in_project.json()["id"]
 
 
+async def test_generate_episode_endpoint_rejects_malformed_json_body(
+    client: httpx.AsyncClient,
+) -> None:
+    response = await client.post(
+        "/episodes/generate",
+        content=b"{not valid json",
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 422
+
+
+async def test_generate_episode_endpoint_rejects_an_overlong_theme_id(
+    client: httpx.AsyncClient,
+) -> None:
+    response = await client.post("/episodes/generate", json={"theme_id": "x" * 101})
+
+    assert response.status_code == 422
+
+
+async def test_list_generated_episodes_rejects_a_page_size_over_the_max(
+    client: httpx.AsyncClient,
+) -> None:
+    response = await client.get("/episodes", params={"page_size": 101})
+
+    assert response.status_code == 422
+
+
+async def test_list_generated_episodes_rejects_a_non_positive_page(
+    client: httpx.AsyncClient,
+) -> None:
+    response = await client.get("/episodes", params={"page": 0})
+
+    assert response.status_code == 422
+
+
+async def test_generate_episode_endpoint_stores_script_like_input_as_inert_data(
+    client: httpx.AsyncClient,
+) -> None:
+    """A theme_id can never contain markup, but this pins that arbitrary strings
+    round-trip as plain JSON text and are never interpreted or executed server-side."""
+    payload = {"theme_id": "<script>alert(1)</script>"}
+
+    response = await client.post("/episodes/generate", json=payload)
+
+    assert response.status_code == 404
+    assert response.json()["detail"]
+
+
 async def test_delete_generated_episode_endpoint_removes_it(client: httpx.AsyncClient) -> None:
     generated = await client.post("/episodes/generate", json={"theme_id": "arkadaslik"})
     episode_id = generated.json()["id"]
