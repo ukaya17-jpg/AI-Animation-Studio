@@ -487,3 +487,104 @@ auth'a yönelik.
     "Installation" (lokal, Docker'sız) bölümüne de `alembic upgrade
     head` adımı eklendi — orada hiç yoktu, aynı boşluğun lokal
     geliştirmede de yaşanmaması için.
+
+## [2026-08-17 04:45 UTC] Görev C: Frontend giriş/kayıt ekranları
+- Durum: tamamlandı
+- Commit: `a89e1e0` Frontend: giriş/kayıt ekranları, proje sayfası ve
+  Playwright akış testi
+- Test sonucu: backend 110/110 (değişmedi, bu görev frontend-only),
+  ruff+mypy --strict temiz, frontend lint+build temiz; Playwright E2E
+  2/2 geçti (gerçek `docker compose up --build` stack'ine karşı)
+- Notlar:
+  - `/login`, `/register`, gerçek bir `/projects` sayfası (eskiden
+    placeholder'dı), header'da giriş durumu, ve `/episodes`'ta
+    "Bu bölümü projeme kaydet" checkbox'ı eklendi. Token `localStorage`'da
+    saklanıyor — XSS riski kodda (`authContext.tsx`) bir yorumla
+    açıkça not düşüldü, görev metninin istediği gibi.
+  - `AuthContext`/`useAuth`/`AuthProvider`'ı üç ayrı dosyaya bölmek
+    zorunda kaldım (`authContextValue.ts`, `authContext.tsx`,
+    `useAuth.ts`): `eslint-plugin-react-refresh`'in
+    `only-export-components` kuralı (`--max-warnings=0` ile CI'ı
+    kırıyor), bir bileşen dosyasının component-olmayan export'lar
+    (context nesnesi, hook) içermesine izin vermiyor. İlk iki denemem
+    (hepsini tek dosyada tutmak, sonra sadece hook'u ayırıp context'i
+    bırakmak) hâlâ uyarı verdi; üçe bölünce temizlendi.
+  - `toFriendlyErrorMessage`'ın episode-özel fallback metni ("Bölüm
+    üretilirken...") auth formlarında da kullanılıyordu — bunu fark
+    edip `src/lib/errors.ts`'e genel bir versiyon çıkardım (çağıran
+    kendi fallback mesajını veriyor). Bu arada gerçek bir boşluğu da
+    kapattım: FastAPI'nin 422 doğrulama hatası gövdesi bir dizi
+    objedir (`{"detail": [{"msg": ...}]}`), string değil — eski kod
+    `typeof detail === 'string'` kontrolü yüzünden bunu hiç
+    yakalamıyor, jenerik fallback'e düşüyordu. Yeni `errors.ts` dizinin
+    ilk `msg`'ini çıkarıyor.
+  - **Playwright testi ilk denemede gerçekten kırmızıydı** (uydurma
+    değil): `/projects`'e `page.goto()` ile tam sayfa yenilemesi
+    yapınca Vite dev sunucusu onlarca modülü tekrar getiriyor, bu +
+    iki sıralı API çağrısı varsayılan 5 saniyelik Playwright assertion
+    timeout'unu bazen aşıyordu — sayfa "Projeler yükleniyor…"
+    durumunda takılı kalmış gibi görünüyordu. Bir debug script'iyle
+    (ağ isteklerini loglayan, `waitForTimeout(8000)` kullanan) uygulama
+    mantığının aslında doğru çalıştığını kanıtladım (8 saniyede içerik
+    doğru geliyordu) — hata testin kendisindeydi. Düzeltme: dahili
+    navigasyonu `page.goto()` yerine nav linkine tıklamaya çevirdim
+    (gerçek kullanıcı davranışına da daha yakın, SPA client-side
+    routing kullanıyor) ve `playwright.config.ts`'te `expect.timeout`'u
+    10 saniyeye çıkardım (Vite dev sunucusu prod build'den doğal olarak
+    daha yavaş). İki kez art arda çalıştırıp kararlı olduğunu doğruladım.
+  - Playwright'ı CI'a bağlamadım: mevcut GitHub Actions workflow'u
+    backend'i (Postgres servisiyle) ve frontend'i (sadece lint+build)
+    ayrı job'larda çalıştırıyor, ikisini birden + Redis'i ayağa
+    kaldırıp gerçek bir E2E akışı çalıştırmak farklı bir CI mimarisi
+    gerektirir (docker compose'u CI içinde orkestre etmek). Bu görev
+    metninde CI'a bağlama istenmemişti, sadece "Playwright ile ...
+    test ekle" deniyordu — testi ekledim ve `npm run test:e2e` ile
+    elle çalıştırılabilir hâle getirdim, ama CI entegrasyonu bir
+    sonraki oturum için iyi bir aday (Görev 7'nin genişletilmesi gibi
+    düşünülebilir).
+  - Doğrulama tamamen gerçek Docker Compose stack'ine (Görev B'nin
+    otomatik migration'ı sayesinde artık tek komutla ayağa kalkıyor)
+    karşı yapıldı, mock/stub yok. Test sonunda `docker compose down`
+    (volume'ler korunarak) ile kapatıldı.
+
+---
+
+## İKİNCİ TUR TAMAMLANDI
+- A, B, C: 3/3 görev tamamlandı, hiçbiri atlanmadı, 5 commit (kod +
+  günlük girişleri dahil), hepsi `main`'e push edildi.
+- Backend testleri: 110/110 (ilk turun sonundaki 103'ten 110'a).
+  Frontend: ilk kez gerçek testi var (2 Playwright E2E testi, ikisi de
+  yeşil) — Görev 6'nın notundaki "frontend'de hiç test yok" boşluğu
+  kısmen kapandı (hâlâ birim/component testi yok, sadece E2E).
+- Bu turda iki KEZ gerçek bir hata bulundu ve test yazma/doğrulama
+  sürecinde yakalandı (uydurulmadı): (1) `TooManyRequestsError`'ın
+  middleware'den fırlatılınca 500'e düşmesi — bu aslında ilk turdan
+  kalmaydı, bu turda dokunulmadı; (2) Playwright testinin kendisindeki
+  timeout/navigasyon sorunu (uygulama kodu doğruydu, test yanlıştı).
+  Her ikisi de kök nedenine inilip düzeltildi, "testi geçsin diye
+  gevşetme" yapılmadı.
+- Kullanıcının gözden geçirmesi gereken güncellenmiş kritik noktalar:
+  1. GÜVENLİK açığı (project_id sahiplik kontrolü) kapatıldı, ama
+     `GET/DELETE /episodes/{id}` hâlâ hiçbir sahiplik kontrolü
+     yapmıyor — bir bölüm UUID'si bilinirse/tahmin edilirse, bir
+     projeye bağlı olsa bile görülebiliyor. Görev A'nın notlarına
+     bakın.
+  2. Docker artık migration'ları otomatik uyguluyor — ama bu SADECE
+     `docker compose up` akışı için geçerli; production'da farklı bir
+     orkestrasyon (K8s, ECS, vb.) kullanılırsa aynı `alembic upgrade
+     head` adımının deployment pipeline'ına eklenmesi gerekir.
+  3. Playwright E2E testi CI'a bağlı DEĞİL — sadece elle
+     (`npm run test:e2e`, stack ayaktayken) çalıştırılıyor. Regresyona
+     karşı otomatik bir koruma sağlamıyor şu an.
+  4. Frontend'de hâlâ birim/component test çalıştırıcısı yok (Vitest/
+     Jest) — sadece bu turda eklenen 2 E2E testi var. Görev 6'daki not
+     hâlâ geçerli.
+  5. `/episodes` sayfasındaki "projeme kaydet" checkbox'ı kullanıcının
+     SADECE ilk/varsayılan projesini kullanıyor (görev metninin
+     istediği gibi) — birden fazla projesi olan bir kullanıcı hangi
+     projeye kaydedeceğini seçemiyor. Bilinçli minimal kapsam kararı,
+     ama bir sonraki iyileştirme adayı.
+  6. İlk turun 5 kritik noktası (auth kapsamı minimal, migration'lar
+     autogenerate ile üretilmedi, .env yerel tuzağı, vb.) hâlâ geçerli
+     — bu tur onları değiştirmedi, sadece proje_id güvenlik açığını ve
+     Docker migration boşluğunu kapattı.
