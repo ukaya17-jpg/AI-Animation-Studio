@@ -215,3 +215,35 @@ eklenir.
     (bozuk JSON, sayfalama, XSS) backend API'ye özgüydü. Bunu Görev 10
     adayı olarak not düşüyorum: bir sonraki oturumda düşük riskli bir
     Vitest+Testing Library kurulumu değerli olabilir.
+
+## [2026-08-17 02:10 UTC] Görev 7: CI kontrolü
+- Durum: tamamlandı
+- Commit: `dba0523` CI'a Postgres servisiyle Alembic migration
+  doğrulaması ekle
+- Test sonucu: backend 94/94, ruff+mypy --strict temiz, frontend
+  lint+build temiz; ayrıca gerçek Docker Postgres'e karşı elle
+  doğrulandı (aşağıya bakın)
+- Notlar:
+  - `.github/workflows/ci.yml` zaten mevcuttu (backend ruff+mypy+pytest,
+    frontend lint+build). pytest sqlite in-memory DB kullandığı ve
+    CI'da `.env` dosyası hiç olmadığı için (fresh checkout) 20 tema,
+    kalıcı kayıt, auth/proje değişikliklerinin hepsi otomatik olarak
+    zaten kapsanıyordu — bu yönde ek bir adım gerekmedi.
+  - Asıl boşluk: Görev 2/3'te üç migration'ı da (`afe976b06519`,
+    `2d5160e78e57`, `5d693758d125`) elle yazdım çünkü bu ortamda
+    Postgres `alembic revision --autogenerate` için erişilebilir
+    değildi — hiçbiri gerçek bir veritabanına karşı hiç çalıştırılmamış
+    hâldeydi. Bunu somut bir riske çevirmemek için CI backend job'ına
+    bir `postgres:16` servis konteyneri ve `alembic upgrade head`
+    doğrulama adımı ekledim.
+  - Bu değişikliği commit etmeden ÖNCE gerçekten doğruladım: `docker
+    info`/`docker ps` bu makinede çalışıyor (önceki görevlerde
+    denemediğim bir şeydi), `postgres:16`'yı lokal ayağa kaldırıp
+    `alembic upgrade head` çalıştırdım — üç migration da temiz
+    uygulandı — sonra `alembic downgrade base` ile geri aldım (temiz
+    geri alındı, `alembic_version` dışında tablo kalmadı), konteyneri
+    sildim. Yani bu artık varsayım değil, doğrulanmış bir gerçek.
+  - CI'a eklenen `POSTGRES_PASSWORD: ci-only-password` gerçek bir
+    sır değil, sadece CI konteyneri içindeki geçici bir servis şifresi
+    (job bitince konteynerle birlikte yok olur) — `.env`'deki gerçek
+    kimlik bilgilerine dokunulmadı.
