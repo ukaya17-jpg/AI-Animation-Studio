@@ -247,3 +247,24 @@ eklenir.
     sır değil, sadece CI konteyneri içindeki geçici bir servis şifresi
     (job bitince konteynerle birlikte yok olur) — `.env`'deki gerçek
     kimlik bilgilerine dokunulmadı.
+
+## [2026-08-17 02:20 UTC] Görev 8: Veritabanı performans/temizlik
+- Durum: tamamlandı
+- Commit: `d8c8a92` generated_episodes.theme_id'a index ekle
+- Test sonucu: backend 94/94, ruff+mypy --strict temiz, frontend
+  lint+build temiz; migration gerçek Postgres'e karşı doğrulandı
+- Notlar:
+  - Görev metni "theme_key" diyordu ama modelde böyle bir alan yok;
+    bunun `generated_episodes.theme_id` alanını kastettiğini
+    varsaydım (tema bazlı sorgu/filtreleme yapılan tek alan bu).
+  - `created_at` (ilk migration'dan beri) ve `project_id` (Görev 3'te
+    eklendi) zaten indeksliydi; sadece `theme_id` eksikti, onu ekledim
+    — hem modele (`index=True`) hem yeni bir migration'a.
+  - `GET /episodes`'da `page_size` zaten `le=100` ile sınırlıydı
+    (kod bu görevden önce de böyleydi, Görev 3'te fark ettim ve
+    Görev 6'da bunu doğrulayan bir test ekledim) — burada değişiklik
+    gerekmedi.
+  - Bu migration'ı da Görev 7'de kurduğum yöntemle (Docker'da geçici
+    `postgres:16`, `alembic upgrade head`, sonra konteyneri silme)
+    gerçek bir veritabanına karşı doğruladım — dört migration'ın
+    tamamı temiz sırayla uygulandı, `theme_id` indeksi oluştu.
