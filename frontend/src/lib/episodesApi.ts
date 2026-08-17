@@ -1,5 +1,5 @@
-import axios from 'axios'
 import { apiClient } from './api'
+import { toFriendlyErrorMessage as toFriendlyErrorMessageGeneric } from './errors'
 import type {
   EpisodeGenerationResult,
   GeneratedEpisodeList,
@@ -39,17 +39,8 @@ export async function fetchGeneratedEpisode(id: string): Promise<EpisodeGenerati
 }
 
 export function toFriendlyErrorMessage(error: unknown): string {
-  if (axios.isAxiosError(error)) {
-    const detail = (error.response?.data as { detail?: unknown } | undefined)?.detail
-    if (typeof detail === 'string') {
-      return detail
-    }
-    if (error.response?.status === 404) {
-      return 'Seçilen tema bulunamadı.'
-    }
-    if (error.code === 'ECONNABORTED' || !error.response) {
-      return 'Sunucuya ulaşılamadı. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.'
-    }
-  }
-  return 'Bölüm üretilirken beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.'
+  return toFriendlyErrorMessageGeneric(error, {
+    notFoundMessage: 'Seçilen tema bulunamadı.',
+    fallbackMessage: 'Bölüm üretilirken beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.',
+  })
 }

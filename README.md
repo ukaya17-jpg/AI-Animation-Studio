@@ -6,7 +6,7 @@ AI Animation Studio is a scalable foundation for creating, managing, and deliver
 
 - **Neşeli Orman episode studio:** pick from 20 fixed themes (each pairing 2 of 5 recurring characters and 1 of 4 locations) and generate a 5-scene episode script, a YouTube SEO package (titles/description/tags/thumbnail), and a Shorts cut plan, all in one request. Every generation is persisted to PostgreSQL and browsable in a newest-first history list.
 - **Character and location reference art:** every character and location carries a static reference image, shown in the theme picker, generation results, and history list, with meaningful alt text for screen readers.
-- **Authentication and projects:** email/password registration and login (bcrypt-hashed passwords, JWT bearer access tokens), and a `Project` model so a user can eventually group episodes into channels. Generated episodes optionally attach to a project via `project_id`.
+- **Authentication and projects:** email/password registration and login (bcrypt-hashed passwords, JWT bearer access tokens) with `/register` and `/login` pages, a header login/logout indicator, and a `Project` model so a user can group episodes into channels. On `/episodes`, a signed-in user can opt in to saving a generated episode to their project; `/projects` lists their projects and the episodes saved to each. Access to a project's episodes is owner-checked server-side (401/403) whenever `project_id` is used; anonymous, project-less generation and browsing is unaffected.
 - **Accessible, responsive UI:** loading and error states on every network call, a mobile-safe layout down to 375px, and semantic ARIA roles (`radiogroup`, `status`, `aria-live`) where they matter.
 - **Optional rate limiting:** a Redis-backed, fixed-window limiter (tight on `/auth/login`/`/auth/register`, looser elsewhere) is ready to go behind `RATE_LIMIT_ENABLED=true`; it stays off by default so local dev and CI never need a live Redis connection.
 
@@ -63,6 +63,13 @@ The command starts frontend, backend, PostgreSQL, and Redis. The backend contain
 ```bash
 cd backend && python -m ruff check . && python -m mypy app && python -m pytest
 cd frontend && npm run lint && npm run build
+```
+
+An end-to-end Playwright suite (`frontend/tests/e2e/`) covers register → login → generate an episode → save it to a project → see it on `/projects`. It drives the real app, so it needs the full stack running first:
+
+```bash
+docker compose up --build
+cd frontend && npm run test:e2e
 ```
 
 ## Roadmap

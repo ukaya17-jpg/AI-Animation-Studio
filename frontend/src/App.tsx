@@ -1,6 +1,11 @@
-import { NavLink, Route, Routes } from 'react-router-dom'
+import { NavLink, Route, Routes, useNavigate } from 'react-router-dom'
 import { LoadingState } from './components/LoadingState'
 import { EpisodeStudioPage } from './components/episodes/EpisodeStudioPage'
+import { LoginPage } from './components/auth/LoginPage'
+import { RegisterPage } from './components/auth/RegisterPage'
+import { ProjectsPage } from './components/projects/ProjectsPage'
+import { AuthProvider } from './lib/authContext'
+import { useAuth } from './lib/useAuth'
 
 const navigation = [
   { label: 'Dashboard', path: '/' },
@@ -22,11 +27,38 @@ function PlaceholderPage({ title }: { title: string }) {
   )
 }
 
-export default function App() {
+function AuthStatus() {
+  const { isAuthenticated, logout } = useAuth()
+  const navigate = useNavigate()
+
+  if (!isAuthenticated) {
+    return (
+      <NavLink to="/login" className="text-sm font-medium text-indigo-300 hover:underline">
+        Giriş Yap
+      </NavLink>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        logout()
+        navigate('/')
+      }}
+      className="text-sm font-medium text-slate-300 hover:text-white"
+    >
+      Çıkış Yap
+    </button>
+  )
+}
+
+function AppShell() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800 px-6 py-5">
+      <header className="flex items-center justify-between border-b border-slate-800 px-6 py-5">
         <p className="text-xl font-semibold tracking-tight">AI Animation Studio</p>
+        <AuthStatus />
       </header>
       <div className="flex flex-col md:flex-row">
         <nav
@@ -53,13 +85,23 @@ export default function App() {
         <main className="min-w-0 flex-1 p-4 sm:p-6 md:p-8">
           <Routes>
             <Route path="/" element={<PlaceholderPage title="Dashboard" />} />
-            <Route path="/projects" element={<PlaceholderPage title="Projects" />} />
+            <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
             <Route path="/users" element={<PlaceholderPage title="Users" />} />
             <Route path="/episodes" element={<EpisodeStudioPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
           </Routes>
         </main>
       </div>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
   )
 }

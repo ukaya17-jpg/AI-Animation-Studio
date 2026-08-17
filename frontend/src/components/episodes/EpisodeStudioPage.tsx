@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { LoadingState } from '../LoadingState'
 import { EpisodeHistoryList } from './EpisodeHistoryList'
 import { EpisodeSummary } from './EpisodeSummary'
@@ -6,6 +7,7 @@ import { LessonBox } from './LessonBox'
 import { SceneCard } from './SceneCard'
 import { SeoPanel } from './SeoPanel'
 import { ShortsPanel } from './ShortsPanel'
+import { useAuth } from '../../lib/useAuth'
 import {
   fetchGeneratedEpisode,
   fetchGeneratedEpisodes,
@@ -13,10 +15,15 @@ import {
   generateEpisode,
   toFriendlyErrorMessage,
 } from '../../lib/episodesApi'
+import { fetchProjects, type Project } from '../../lib/projectsApi'
 import type { EpisodeGenerationResult, GeneratedEpisodeSummary, ThemeSummary } from '../../types/episode'
 import { ThemePicker } from './ThemePicker'
 
 export function EpisodeStudioPage() {
+  const { isAuthenticated } = useAuth()
+  const [defaultProject, setDefaultProject] = useState<Project | null>(null)
+  const [saveToProject, setSaveToProject] = useState(false)
+
   const [themes, setThemes] = useState<ThemeSummary[]>([])
   const [themesLoading, setThemesLoading] = useState(true)
   const [themesError, setThemesError] = useState<string | null>(null)
@@ -68,12 +75,32 @@ export function EpisodeStudioPage() {
     void loadHistory()
   }, [loadHistory])
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setDefaultProject(null)
+      setSaveToProject(false)
+      return
+    }
+    let cancelled = false
+    fetchProjects()
+      .then((projects) => {
+        if (!cancelled) setDefaultProject(projects[0] ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setDefaultProject(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthenticated])
+
   async function handleGenerate() {
     if (!selectedThemeId) return
     setGenerating(true)
     setGenerateError(null)
     try {
-      const data = await generateEpisode(selectedThemeId)
+      const projectId = saveToProject && defaultProject ? defaultProject.id : undefined
+      const data = await generateEpisode(selectedThemeId, projectId)
       setResult(data)
       setSelectedEpisodeId(data.id)
       await loadHistory()
@@ -118,6 +145,30 @@ export function EpisodeStudioPage() {
           <ThemePicker themes={themes} selectedThemeId={selectedThemeId} onSelect={setSelectedThemeId} />
         )}
       </div>
+
+      {isAuthenticated && (
+        <div className="mt-4">
+          {defaultProject ? (
+            <label className="flex items-center gap-2 text-sm text-slate-300">
+              <input
+                type="checkbox"
+                checked={saveToProject}
+                onChange={(event) => setSaveToProject(event.target.checked)}
+                className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-indigo-500 focus:ring-indigo-400"
+              />
+              Bu bölümü projeme kaydet ({defaultProject.name})
+            </label>
+          ) : (
+            <p className="text-sm text-slate-500">
+              Bölümü bir projeye kaydetmek için önce{' '}
+              <Link to="/projects" className="text-indigo-300 hover:underline">
+                bir proje oluştur
+              </Link>
+              .
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="mt-6">
         <button
