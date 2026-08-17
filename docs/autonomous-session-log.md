@@ -133,3 +133,41 @@ eklenir.
     md:flex-row`, nav `overflow-x-auto` + `whitespace-nowrap`),
     `main`'de `min-w-0 flex-1` ve kademeli dolgu (`p-4 sm:p-6
     md:p-8`) eklendi. Masaüstü görünümü (≥768px) pikselde değişmedi.
+
+## [2026-08-17 01:30 UTC] Görev 5: Erişilebilirlik taraması
+- Durum: tamamlandı
+- Commit: `060c6eb` Erişilebilirlik: karakter/mekan görsellerine anlamlı
+  alt metni ekle
+- Test sonucu: backend 78/78, ruff+mypy --strict temiz, frontend
+  lint+build temiz
+- Notlar:
+  - Çoğu erişilebilirlik zaten iyi durumdaydı: `LoadingState`
+    `role="status"` kullanıyor, `ThemePicker` `role="radiogroup"` +
+    `aria-checked`, dekoratif emoji ikonları `aria-hidden="true"`,
+    `EpisodeSummary`'deki görseller zaten anlamlı `alt` içeriyordu.
+    Tüm `<button>` ve `<img>` kullanımlarını `grep` ile tek tek taradım.
+  - Gerçek bulgu: `ThemePicker` ve `EpisodeHistoryList`'teki karakter/
+    mekan avatarları `alt=""` (dekoratif) işaretliydi, ama hangi
+    karakter/mekan olduğu görünür metinde HİÇ geçmiyordu (ThemePicker
+    sadece tema adını — "Paylaşma" — gösteriyor, karakter/mekan adı
+    yok; EpisodeHistoryList da sadece bölüm başlığı+tema+tarih
+    gösteriyor). Yani bu görseller gerçekten bilgi taşıyordu, dekoratif
+    değildi — ekran okuyucu kullanıcıları "kimin" resmi olduğunu asla
+    öğrenemiyordu.
+  - Bunu düzeltmek için karakter/mekan adlarını backend'den taşımam
+    gerekti: `ThemeSummaryResponse` ve `GeneratedEpisodeSummaryResponse`
+    şemalarına `lead_character_name`/`support_character_name`/
+    `location_name` ekledim (veri zaten `ContentBank`'te `.name` olarak
+    mevcuttu, sadece API'ye yansıtılmamıştı). Bu, görev tanımının
+    dar okumasının (sadece frontend'de alt ekle) biraz ötesine geçen
+    küçük bir backend değişikliği ama gerçek erişilebilirlik açığını
+    kapatmak için gerekliydi — sahte/placeholder alt metni ("karakter
+    resmi" gibi) eklemek yerine gerçek veriyi taşımayı tercih ettim.
+  - `CopyButton`'a `aria-live="polite"` ekledim: "Kopyalandı ✓" durum
+    değişikliği artık ekran okuyucuya da bildiriliyor (öncesinde
+    sadece görsel bir değişiklikti).
+  - Kapsam dışı bıraktığım şeyler: renk kontrastı taraması (Tailwind
+    slate/indigo paleti zaten yeterli kontrastta görünüyor, otomatik
+    bir araçla ölçmedim — bu ortamda axe-core/lighthouse kurulu değil
+    ve görev metni özellikle görsel alt/aria-label istiyordu, kontrast
+    denetimini istemedi).
