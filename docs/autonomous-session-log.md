@@ -97,3 +97,39 @@ eklenir.
     Query() satırları neden tetiklemiyor tam anlayamadım — muhtemelen
     ruff'ın iç sezgisel kuralı), kod tabanındaki yerleşik desene uyarak
     `# noqa: B008` ekledim.
+
+## [2026-08-17 01:10 UTC] Görev 4: Frontend hata ve yüklenme durumları
+- Durum: tamamlandı
+- Commit: `42e5a9a` Mobilde bozulan sabit genişlikli kenar çubuğunu düzelt
+- Test sonucu: backend 78/78 (etkilenmedi), frontend lint+build temiz;
+  Playwright ile gerçek tarayıcı ekran görüntüsüyle doğrulandı
+- Notlar:
+  - `/episodes` sayfasını inceledim: hata mesajları (temalar, geçmiş,
+    üretim için ayrı ayrı, `toFriendlyErrorMessage` ile ağ hatası/404
+    ayrımı yapan) ve yükleme spinner'ları (`LoadingState`,
+    `role="status"`) zaten mevcuttu — eklenecek bir şey yoktu.
+  - Asıl kırık olan şey mobil düzendi: `App.tsx`'teki yan menü sabit
+    `w-56` (224px) genişlikteydi ve `main` `p-8` (32px) dolgu
+    kullanıyordu; 375px genişlikte bu, içerik için ~87px bırakıyordu.
+    Bunu playwright ile doğrudan test ettim (bkz. aşağı).
+  - Bu ortamda `chromium-cli` kurulu değildi; `npx playwright install`
+    denedim ve internet erişimi olduğunu, Chromium'un zaten
+    `~/.cache/ms-playwright` altında hazır olduğunu gördüm. Node
+    modülü çözümlemesi için `frontend/`e geçici olarak
+    `npm install --no-save playwright` yaptım (package.json/lock
+    değişmedi, iş bitince `npm uninstall playwright --no-save` ile
+    geri aldım).
+    Gerçek tarayıcıda 375px ve 1280px'te ekran görüntüsü aldım: 375px
+    öncesi durumda (bu görevden önce) taşma olurdu; düzeltmeden sonra
+    `scrollWidth === clientWidth` (taşma yok), hem hata durumları hem
+    yükleme spinner'ları görsel olarak doğru render oluyor.
+    Doğrulama için `vite.config.ts`'in proxy target'ını geçici olarak
+    `backend:8000`'den `localhost:8000`'e çevirip minik bir Python
+    mock sunucusuyla test ettim, sonra `git checkout -- vite.config.ts`
+    ile değişikliği geri aldım — commit'e hiçbir test/mock artığı
+    girmedi.
+  - Düzeltme: yan menü artık `md:` breakpoint'inin altında yatay
+    kaydırılabilir bir üst çubuğa dönüşüyor (`flex flex-col
+    md:flex-row`, nav `overflow-x-auto` + `whitespace-nowrap`),
+    `main`'de `min-w-0 flex-1` ve kademeli dolgu (`p-4 sm:p-6
+    md:p-8`) eklendi. Masaüstü görünümü (≥768px) pikselde değişmedi.
