@@ -588,3 +588,26 @@ auth'a yönelik.
      autogenerate ile üretilmedi, .env yerel tuzağı, vb.) hâlâ geçerli
      — bu tur onları değiştirmedi, sadece proje_id güvenlik açığını ve
      Docker migration boşluğunu kapattı.
+
+---
+
+# Üçüncü tur: A (tekil bölüm sahiplik kontrolü) / B (Playwright CI) / C (not)
+
+## [2026-08-17 05:10 UTC] Görev A: GET/DELETE /episodes/{id} sahiplik kontrolü
+- Durum: tamamlandı
+- Commit: `e4d4e1b` GÜVENLİK: GET/DELETE /episodes/{id}'ye sahiplik
+  kontrolü ekle
+- Test sonucu: backend 117/117 (110'dan 117'ye çıktı), ruff+mypy
+  --strict temiz, frontend lint+build temiz (backend-only görev)
+- Notlar:
+  - İkinci turun sonunda kendim not düşmüştüm bu boşluğu; aynen
+    tarif edildiği gibi kapatıldı. `_authorize_project_access`
+    helper'ı hiç değiştirmeden yeniden kullandım — desen (401
+    kimliksiz, 403 yanlış sahip) önceki turla birebir tutarlı.
+  - DELETE'te sahiplik kontrolünü silme işleminden ÖNCE yapmak
+    gerekiyordu (önce `get_generated_episode` ile kaydı/`project_id`'yi
+    çek, sonra yetkilendir, sonra sil) — bunu, yanlış kullanıcının
+    reddedilen silme denemesinin kaydı gerçekten silmediğini
+    doğrulayan ayrı bir testle (`still_there` kontrolü) pekiştirdim.
+  - `project_id` NULL olan (anonim) bölümler için davranış hiç
+    değişmedi — mevcut ilgili testler değişmeden geçti.
