@@ -611,3 +611,90 @@ auth'a yönelik.
     doğrulayan ayrı bir testle (`still_there` kontrolü) pekiştirdim.
   - `project_id` NULL olan (anonim) bölümler için davranış hiç
     değişmedi — mevcut ilgili testler değişmeden geçti.
+
+## [2026-08-17 05:45 UTC] Görev B: Playwright E2E testlerini CI'a ekle
+- Durum: tamamlandı
+- Commit: `cc3dc90` CI'a Playwright E2E job'u ekle; testte gerçek bir
+  strict-mode hatasını düzelt
+- Test sonucu: backend 117/117, ruff+mypy --strict temiz, frontend
+  lint+build temiz; **GERÇEK GitHub Actions'ta doğrulandı** (aşağıya
+  bakın) — bu sadece lokal bir iddia değil.
+- Notlar:
+  - `.github/workflows/ci.yml`'e `backend`+`frontend` job'larından
+    sonra (`needs:`) çalışan bir `e2e` job'u eklendi: `docker compose
+    up -d --build` ile tam stack, sabit `sleep` yerine `/health/ready`
+    ve frontend'i poll'layan bekleme, `npm run test:e2e`, sonuçtan
+    bağımsız (`if: always()`) `docker compose down -v` ile temizlik,
+    ve `if: always()` ile `playwright-report/` artifact yüklemesi
+    (7 gün saklama) + `if: failure()` ile backend log'larını basma.
+  - **Bu makinede (paylaşımlı sandbox) lokal Playwright çalıştırmaları
+    bu turda güvenilir değildi**: RAM neredeyse tamamen doluydu
+    (`free -h` → ~150Mi boş, `load average` 4-6 arası) çünkü aynı
+    makinede ilgisiz VSCode sunucuları, başka bir Claude Code oturumu,
+    ve ayrı bir proje (Streamlit) çalışıyordu — benim süreçlerim değil,
+    dokunmadım. Sonuç: Chromium birkaç kez gerçekten çöktü ("Target
+    crashed") ya da normalde <10ms süren adımlar (curl ile doğrulandı)
+    15-20 saniyeyi aştı. Bunu "muhtemelen ortam sorunu" diye
+    varsaymadım — bir hata anının DOM snapshot'ının aslında tamamen
+    doğru içeriği (radiogroup, tüm temalar) gösterdiğini görüp
+    doğruladım; sadece geç gelmişti. Timeout'ları biraz artırdım
+    (expect: 20s, test: 60s) ve CI'da 1 retry ekledim, ama gerçek
+    doğrulamayı GitHub Actions'ın özel runner'ına bıraktım.
+  - Bu süreçte GERÇEK bir hata da buldum (uydurma değil): testte
+    `getByRole('link', { name: 'Giriş Yap' })` varsayılan olarak
+    case-insensitive alt-dize eşleştirmesi yapıyor; `/projects`
+    sayfasındaki (çıkış yapılmış durumdaki) "giriş yapmalısın" linki
+    de bu alt-dizeyi içeriyor, "strict mode violation: resolved to 2
+    elements" hatası veriyordu. `exact: true` ile düzeltildi.
+  - **Gerçek doğrulama**: main'e push sonrası GitHub Actions run'ı
+    (`gh run view 32025748639`) izlendi — Backend 1m19s, Frontend 21s,
+    **E2E (Playwright) 1m37s**, hepsi ✓ yeşil. Bu, özel/paylaşılmayan
+    bir runner'da E2E job'unun makul sürede (istenen "birkaç dakika"
+    sınırının çok altında) ve güvenilir şekilde geçtiğini kanıtlıyor —
+    sandbox'taki yavaşlığın gerçekten ortamsal olduğunu doğruluyor.
+  - **Kırmızı kanıtı**: `ci-verify-red-build` adında geçici bir branch
+    açıp bilerek kırık bir test (`expect(1).toBe(2)`) ekledim, push
+    ettim, CI run'ını izledim (`32026045549`) — Backend/Frontend yeşil,
+    **E2E kırmızı** (`Run Playwright end-to-end tests` adımı `exit
+    code 1` ile başarısız), ama `Show backend logs`, `Upload Playwright
+    report`, ve `Tear down the stack` adımları yine de çalıştı
+    (`if: always()`/`if: failure()` doğru davranıyor). Sonra
+    `git checkout main` + `git branch -D` + `git push origin --delete`
+    ile branch'i hem lokalden hem remote'tan sildim — main'e bu kırık
+    commit hiç girmedi (`git log`'da main hâlâ `cc3dc90`'da).
+  - Küçük, aksiyon gerektirmeyen bir not: CI çıktısında "Node.js 20 is
+    deprecated" uyarısı var (GitHub'ın kendi action runtime'ı için,
+    bizim `node-version: 20` npm hedefimizle ilgisiz) — kozmetik,
+    şimdilik göz ardı edildi.
+
+## Görev C: Çoklu proje seçimi — bilinen sınırlama
+`/episodes` sayfasındaki "Bu bölümü projeme kaydet" checkbox'ı hâlâ
+sadece kullanıcının ilk/varsayılan projesini kullanıyor; birden fazla
+projesi olan bir kullanıcı hangi projeye kaydedeceğini seçemiyor.
+Bilinçli minimal kapsam kararı (2. turda da not düşülmüştü) — gelecekte
+ele alınacak, bu turda kod değişikliği yapılmadı.
+
+---
+
+## ÜÇÜNCÜ TUR TAMAMLANDI
+- A, B: 2/2 kod görevi tamamlandı; C sadece bir not (kod değişikliği
+  istenmedi). 2 commit main'e gitti (`e4d4e1b`, `cc3dc90`) + günlük
+  girişleri; ayrıca main'e hiç girmeyen 1 geçici doğrulama commit'i
+  (`ci-verify-red-build` branch'i, silindi).
+- Backend testleri: 117/117 (ikinci turun sonundaki 110'dan 117'ye).
+- Bu tur, CI'ın gerçekten çalıştığını hem yeşil hem kırmızı tarafta
+  kanıtladı — varsayım değil, `gh run view` ile doğrudan gözlemlendi.
+- Kullanıcının gözden geçirmesi gereken güncellenmiş noktalar:
+  1. `GET/DELETE /episodes/{id}` artık sahiplik kontrollü — ikinci
+     turun sonunda bıraktığım boşluk kapandı.
+  2. Playwright E2E artık CI'da (main'e her push'ta çalışıyor) —
+     ikinci turun "CI'a bağlı değil" notu artık geçerli değil.
+  3. Bu sandbox makinesi (paylaşımlı, düşük RAM) lokal Playwright
+     çalıştırmaları için güvenilir değil — gelecekte burada E2E
+     debug etmek gerekirse, önce `free -h` ile bellek durumunu kontrol
+     edin; asıl doğrulama her zaman GitHub Actions'ta yapılmalı.
+  4. Çoklu proje seçimi hâlâ yok (Görev C notu) — bilinen, ertelenen
+     bir sınırlama.
+  5. Önceki turların tüm diğer notları (auth kapsamı minimal, elle
+     yazılan migration'lar, frontend'de birim/component testi yok,
+     yerel `.env` tuzağı) hâlâ geçerli.
