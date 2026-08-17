@@ -72,3 +72,23 @@ async def get_current_user(
     if user is None:
         raise unauthorized
     return user
+
+
+async def get_optional_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),  # noqa: B008
+    session: AsyncSession = Depends(get_db_session),  # noqa: B008
+) -> User | None:
+    """Resolve the authenticated user from a bearer token if one was given and valid.
+
+    Unlike ``get_current_user``, a missing or invalid/expired token is not an
+    error here — the caller is simply treated as anonymous. Endpoints that must
+    distinguish "anonymous" from "presented bad credentials" (e.g. to gate
+    access behind a ``project_id``) check for ``None`` themselves.
+    """
+    if credentials is None:
+        return None
+    try:
+        user_id = decode_access_token(credentials.credentials, get_settings())
+    except InvalidTokenError:
+        return None
+    return await UserRepository(session).get_by_id(user_id)

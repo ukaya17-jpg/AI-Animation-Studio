@@ -4,7 +4,8 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.api.dependencies import get_episode_service
+from app.api.dependencies import get_episode_service, get_optional_current_user, get_project_service
+from app.models.user import User
 from app.schemas.episode import (
     EpisodeGenerateRequest,
     EpisodeGenerationResponse,
@@ -12,8 +13,31 @@ from app.schemas.episode import (
     ThemeSummaryResponse,
 )
 from app.services.episode_service import EpisodeService
+from app.services.project_service import ProjectService
 
 router = APIRouter(prefix="/episodes")
+
+
+async def _authorize_project_access(
+    project_id: uuid.UUID, current_user: User | None, project_service: ProjectService
+) -> None:
+    """Raise 401/403 unless the caller owns ``project_id``.
+
+    A missing/invalid token is 401 ("who are you"); a valid token for a
+    project the caller doesn't own is 403 ("not yours") — and a project_id
+    that doesn't exist at all is folded into the same 403 rather than 404,
+    so an unauthorized caller can't use the response to probe which
+    project ids exist.
+    """
+    if current_user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication is required to use project_id.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    project = await project_service.get_by_id(project_id)
+    if project is None or project.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You do not have access to this project.")
 
 
 @router.get(
@@ -37,12 +61,18 @@ async def list_generated_episodes(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     project_id: uuid.UUID | None = Query(default=None),  # noqa: B008
+    current_user: User | None = Depends(get_optional_current_user),  # noqa: B008
+    project_service: ProjectService = Depends(get_project_service),  # noqa: B008
     service: EpisodeService = Depends(get_episode_service),  # noqa: B008
 ) -> GeneratedEpisodeListResponse:
     """Return one newest-first page of previously generated episode summaries.
 
-    Pass ``project_id`` to scope the page to episodes generated under that project.
+    Pass ``project_id`` to scope the page to episodes generated under that
+    project; doing so requires a bearer token for that project's owner.
+    Omitting ``project_id`` keeps the existing anonymous, unscoped listing.
     """
+    if project_id is not None:
+        await _authorize_project_access(project_id, current_user, project_service)
     result = await service.list_generated_episodes(
         page=page, page_size=page_size, project_id=project_id
     )
@@ -57,9 +87,17 @@ async def list_generated_episodes(
 )
 async def generate_episode(
     payload: EpisodeGenerateRequest,
+    current_user: User | None = Depends(get_optional_current_user),  # noqa: B008
+    project_service: ProjectService = Depends(get_project_service),  # noqa: B008
     service: EpisodeService = Depends(get_episode_service),  # noqa: B008
 ) -> EpisodeGenerationResponse:
-    """Turn a fixed theme id into a full episode script, SEO package, and Shorts cut."""
+    """Turn a fixed theme id into a full episode script, SEO package, and Shorts cut.
+
+    Passing ``project_id`` requires a bearer token for that project's owner;
+    omitting it keeps the existing anonymous generation flow unchanged.
+    """
+    if payload.project_id is not None:
+        await _authorize_project_access(payload.project_id, current_user, project_service)
     try:
         result = await service.generate(payload.theme_id, project_id=payload.project_id)
     except ValueError as error:
