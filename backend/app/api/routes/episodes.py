@@ -112,12 +112,21 @@ async def generate_episode(
 )
 async def get_generated_episode(
     episode_id: uuid.UUID,
+    current_user: User | None = Depends(get_optional_current_user),  # noqa: B008
+    project_service: ProjectService = Depends(get_project_service),  # noqa: B008
     service: EpisodeService = Depends(get_episode_service),  # noqa: B008
 ) -> EpisodeGenerationResponse:
-    """Return one persisted episode by id, or 404 if it doesn't exist."""
+    """Return one persisted episode by id, or 404 if it doesn't exist.
+
+    Episodes linked to a project (``project_id`` is not null) are only
+    readable by that project's owner; standalone/anonymous episodes are
+    unaffected and stay openly readable.
+    """
     result = await service.get_generated_episode(episode_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Generated episode not found.")
+    if result["project_id"] is not None:
+        await _authorize_project_access(result["project_id"], current_user, project_service)
     return EpisodeGenerationResponse.model_validate(result)
 
 
@@ -128,9 +137,20 @@ async def get_generated_episode(
 )
 async def delete_generated_episode(
     episode_id: uuid.UUID,
+    current_user: User | None = Depends(get_optional_current_user),  # noqa: B008
+    project_service: ProjectService = Depends(get_project_service),  # noqa: B008
     service: EpisodeService = Depends(get_episode_service),  # noqa: B008
 ) -> None:
-    """Delete one persisted episode by id, or 404 if it doesn't exist."""
+    """Delete one persisted episode by id, or 404 if it doesn't exist.
+
+    Episodes linked to a project can only be deleted by that project's
+    owner; standalone/anonymous episodes stay openly deletable, unchanged.
+    """
+    result = await service.get_generated_episode(episode_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Generated episode not found.")
+    if result["project_id"] is not None:
+        await _authorize_project_access(result["project_id"], current_user, project_service)
     deleted = await service.delete_generated_episode(episode_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Generated episode not found.")

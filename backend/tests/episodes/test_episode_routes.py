@@ -287,6 +287,120 @@ async def test_generate_episode_endpoint_stores_script_like_input_as_inert_data(
     assert response.json()["detail"]
 
 
+async def test_get_generated_episode_endpoint_requires_authentication_for_a_project_episode(
+    client: httpx.AsyncClient,
+) -> None:
+    project_id, headers = await _create_project(client, "get-project-owner@example.com")
+    generated = await client.post(
+        "/episodes/generate",
+        json={"theme_id": "duygular", "project_id": project_id},
+        headers=headers,
+    )
+    episode_id = generated.json()["id"]
+
+    response = await client.get(f"/episodes/{episode_id}")
+
+    assert response.status_code == 401
+
+
+async def test_get_generated_episode_endpoint_rejects_a_non_owner(
+    client: httpx.AsyncClient,
+) -> None:
+    project_id, headers = await _create_project(client, "get-real-owner@example.com")
+    generated = await client.post(
+        "/episodes/generate",
+        json={"theme_id": "duygular", "project_id": project_id},
+        headers=headers,
+    )
+    episode_id = generated.json()["id"]
+    other_headers = await _authorized_headers(client, "get-intruder@example.com")
+
+    response = await client.get(f"/episodes/{episode_id}", headers=other_headers)
+
+    assert response.status_code == 403
+
+
+async def test_get_generated_episode_endpoint_allows_the_owner(
+    client: httpx.AsyncClient,
+) -> None:
+    project_id, headers = await _create_project(client, "get-owner-allowed@example.com")
+    generated = await client.post(
+        "/episodes/generate",
+        json={"theme_id": "duygular", "project_id": project_id},
+        headers=headers,
+    )
+    episode_id = generated.json()["id"]
+
+    response = await client.get(f"/episodes/{episode_id}", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["id"] == episode_id
+
+
+async def test_get_generated_episode_endpoint_stays_open_for_a_project_less_episode(
+    client: httpx.AsyncClient,
+) -> None:
+    generated = await client.post("/episodes/generate", json={"theme_id": "duygular"})
+    episode_id = generated.json()["id"]
+
+    response = await client.get(f"/episodes/{episode_id}")
+
+    assert response.status_code == 200
+
+
+async def test_delete_generated_episode_endpoint_requires_authentication_for_a_project_episode(
+    client: httpx.AsyncClient,
+) -> None:
+    project_id, headers = await _create_project(client, "delete-project-owner@example.com")
+    generated = await client.post(
+        "/episodes/generate",
+        json={"theme_id": "duygular", "project_id": project_id},
+        headers=headers,
+    )
+    episode_id = generated.json()["id"]
+
+    response = await client.delete(f"/episodes/{episode_id}")
+
+    assert response.status_code == 401
+
+
+async def test_delete_generated_episode_endpoint_rejects_a_non_owner(
+    client: httpx.AsyncClient,
+) -> None:
+    project_id, headers = await _create_project(client, "delete-real-owner@example.com")
+    generated = await client.post(
+        "/episodes/generate",
+        json={"theme_id": "duygular", "project_id": project_id},
+        headers=headers,
+    )
+    episode_id = generated.json()["id"]
+    other_headers = await _authorized_headers(client, "delete-intruder@example.com")
+
+    response = await client.delete(f"/episodes/{episode_id}", headers=other_headers)
+
+    assert response.status_code == 403
+
+    # Confirm the non-owner's rejected attempt didn't actually delete it.
+    still_there = await client.get(f"/episodes/{episode_id}", headers=headers)
+    assert still_there.status_code == 200
+
+
+async def test_delete_generated_episode_endpoint_allows_the_owner(
+    client: httpx.AsyncClient,
+) -> None:
+    project_id, headers = await _create_project(client, "delete-owner-allowed@example.com")
+    generated = await client.post(
+        "/episodes/generate",
+        json={"theme_id": "duygular", "project_id": project_id},
+        headers=headers,
+    )
+    episode_id = generated.json()["id"]
+
+    response = await client.delete(f"/episodes/{episode_id}", headers=headers)
+
+    assert response.status_code == 204
+
+
 async def test_delete_generated_episode_endpoint_removes_it(client: httpx.AsyncClient) -> None:
     generated = await client.post("/episodes/generate", json={"theme_id": "arkadaslik"})
     episode_id = generated.json()["id"]
