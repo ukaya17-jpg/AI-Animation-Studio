@@ -11,6 +11,20 @@ jobs:
   backend:
     name: Backend lint and test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ai_animation_studio
+          POSTGRES_USER: app_user
+          POSTGRES_PASSWORD: ci-only-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run: { working-directory: backend }
     steps:
@@ -25,6 +39,10 @@ jobs:
       - run: python -m ruff check .
       - run: python -m mypy app
       - run: python -m pytest
+      - name: Verify Alembic migrations apply cleanly
+        env:
+          DATABASE_URL: postgresql+asyncpg://app_user:ci-only-password@localhost:5432/ai_animation_studio
+        run: python -m alembic upgrade head
   frontend:
     name: Frontend lint and build
     runs-on: ubuntu-latest
