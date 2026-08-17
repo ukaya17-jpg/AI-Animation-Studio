@@ -19,6 +19,7 @@ export function CopyButton({ value, label = 'Kopyala' }: CopyButtonProps) {
     <button
       type="button"
       onClick={handleCopy}
+      aria-live="polite"
       className="shrink-0 rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-200 transition hover:bg-slate-700"
     >
       {copied ? 'Kopyalandı ✓' : label}

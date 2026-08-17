@@ -44,12 +44,12 @@ export function EpisodeHistoryList({
               <div className="flex -space-x-2">
                 <img
                   src={episode.lead_character_image_url}
-                  alt=""
+                  alt={episode.lead_character_name}
                   className="h-8 w-8 rounded-full border-2 border-slate-900 bg-slate-800 object-cover"
                 />
                 <img
                   src={episode.support_character_image_url}
-                  alt=""
+                  alt={episode.support_character_name}
                   className="h-8 w-8 rounded-full border-2 border-slate-900 bg-slate-800 object-cover"
                 />
               </div>

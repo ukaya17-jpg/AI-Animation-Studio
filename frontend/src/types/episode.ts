@@ -1,8 +1,11 @@
 export type ThemeSummary = {
   theme_id: string
   label: string
+  lead_character_name: string
   lead_character_image_url: string
+  support_character_name: string
   support_character_image_url: string
+  location_name: string
   location_image_url: string
 }
 
@@ -86,8 +89,11 @@ export type GeneratedEpisodeSummary = {
   title: string
   theme_id: string
   theme_label: string
+  lead_character_name: string
   lead_character_image_url: string
+  support_character_name: string
   support_character_image_url: string
+  location_name: string
   location_image_url: string
   created_at: string
 }

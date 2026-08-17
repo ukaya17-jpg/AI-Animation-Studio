@@ -42,8 +42,11 @@ class EpisodeService:
                 {
                     "theme_id": theme.theme_id,
                     "label": theme.label,
+                    "lead_character_name": lead.name,
                     "lead_character_image_url": lead.image_url,
+                    "support_character_name": support.name,
                     "support_character_image_url": support.image_url,
+                    "location_name": location.name,
                     "location_image_url": location.image_url,
                 }
             )
@@ -136,8 +139,11 @@ class EpisodeService:
             "title": record.title,
             "theme_id": record.theme_id,
             "theme_label": record.theme_label,
+            "lead_character_name": lead.name,
             "lead_character_image_url": lead.image_url,
+            "support_character_name": support.name,
             "support_character_image_url": support.image_url,
+            "location_name": location.name,
             "location_image_url": location.image_url,
             "created_at": record.created_at,
         }

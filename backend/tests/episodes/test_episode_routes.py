@@ -23,8 +23,11 @@ async def test_list_themes_endpoint_returns_all_twenty_themes(client: httpx.Asyn
     assert len(body) == 20
     paylasma = next(item for item in body if item["theme_id"] == "paylasma")
     assert paylasma["label"] == "Paylaşma"
+    assert paylasma["lead_character_name"]
     assert paylasma["lead_character_image_url"] == "/static/characters/findik.png"
+    assert paylasma["support_character_name"]
     assert paylasma["support_character_image_url"] == "/static/characters/boncuk.png"
+    assert paylasma["location_name"]
     assert paylasma["location_image_url"] == "/static/locations/paylasim_bahcesi.png"
 
 
@@ -65,6 +68,7 @@ async def test_generated_episode_is_persisted_and_listed(client: httpx.AsyncClie
     assert summary["id"] == episode_id
     assert summary["theme_id"] == "cesaret"
     assert summary["title"] == "Neşeli Orman: Cesaret"
+    assert summary["lead_character_name"]
     assert summary["lead_character_image_url"] == "/static/characters/minik.png"
 
 

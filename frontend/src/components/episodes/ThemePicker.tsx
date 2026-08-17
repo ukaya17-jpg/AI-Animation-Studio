@@ -32,18 +32,18 @@ export function ThemePicker({ themes, selectedThemeId, onSelect }: ThemePickerPr
               <div className="flex -space-x-2">
                 <img
                   src={theme.lead_character_image_url}
-                  alt=""
+                  alt={theme.lead_character_name}
                   className="h-9 w-9 rounded-full border-2 border-slate-900 bg-slate-800 object-cover"
                 />
                 <img
                   src={theme.support_character_image_url}
-                  alt=""
+                  alt={theme.support_character_name}
                   className="h-9 w-9 rounded-full border-2 border-slate-900 bg-slate-800 object-cover"
                 />
               </div>
               <img
                 src={theme.location_image_url}
-                alt=""
+                alt={theme.location_name}
                 className="h-9 w-14 rounded-md border border-slate-700 object-cover"
               />
             </div>
