@@ -5,6 +5,7 @@ from app.models.episode import Episode, EpisodeScene
 from app.models.episode_cast import EpisodeCharacter, EpisodeLocation, EpisodeTheme, VoiceProfile
 from app.models.episode_distribution import SeoPackage, ShortsPlan, ShortsSegment
 from app.models.generated_episode import GeneratedEpisode
+from app.models.project import Project
 from app.models.scene import (
     AnimationInstruction,
     CameraSetting,
@@ -15,6 +16,7 @@ from app.models.scene import (
     Scene,
 )
 from app.models.storyboard import Metadata, SceneList, Statistics, Storyboard, TotalDuration
+from app.models.user import User
 
 __all__ = [
     "AnimationInstruction",
@@ -30,6 +32,7 @@ __all__ = [
     "EpisodeTheme",
     "GeneratedEpisode",
     "Narration",
+    "Project",
     "Scene",
     "SceneList",
     "SeoPackage",
@@ -39,5 +42,6 @@ __all__ = [
     "Storyboard",
     "Metadata",
     "TotalDuration",
+    "User",
     "VoiceProfile",
 ]
