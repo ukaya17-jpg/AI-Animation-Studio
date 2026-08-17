@@ -698,3 +698,96 @@ ele alınacak, bu turda kod değişikliği yapılmadı.
   5. Önceki turların tüm diğer notları (auth kapsamı minimal, elle
      yazılan migration'lar, frontend'de birim/component testi yok,
      yerel `.env` tuzağı) hâlâ geçerli.
+
+---
+
+# Dördüncü tur: A (README güncelleme) / B (.env tuzağını kalıcı çöz)
+
+Bu tur, bir önceki (denetim) turunda tespit edilen iki somut boşluğa
+yönelik: README'nin 3. turdaki sahiplik genişlemesini ve ses özelliğini
+yansıtmaması, ve `test_production_settings_reject_default_database_password`
+testinin (ve aslında dosyadaki neredeyse tüm production-settings
+testlerinin) yerel `.env` dosyasının içeriğine göre CI'dan farklı sonuç
+vermesi.
+
+## [2026-08-17 12:50 UTC] Görev A: README güncelleme
+- Durum: tamamlandı
+- Notlar:
+  - "20 tema" zaten doğru yazıyordu (denetim talimatındaki "9 değil" notu
+    güncel değildi/yanlış hatırlanmıştı) — dokunmadım, yanlış bir şeyi
+    "düzeltmiş" gibi görünmemek için olduğu gibi bıraktım.
+  - Gerçek boşluklar: (1) "Authentication and projects" maddesi hâlâ
+    sahiplik kontrolünü sadece "project_id verildiğinde" diye anlatıyordu
+    — 3. turda `GET`/`DELETE /episodes/{id}`'ye (project_id parametresi
+    olmadan, doğrudan id ile) de genişletildiğini yansıtacak şekilde
+    güncelledim, API tablosundaki ilgili iki satırı da aynı şekilde
+    netleştirdim. (2) Ses örnekleri (`984f89f`) README'de hiç yoktu —
+    yeni bir "Character voice samples" maddesi eklendim,
+    `docs/ses-rehberi.md`'ye link verdim, `GET /episodes/themes`
+    satırına voice sample URL'lerini ekledim. (3) "Quality checks"
+    bölümü Playwright'ın artık CI'da (`e2e` job, her push'ta) otomatik
+    çalıştığından hiç bahsetmiyordu, sadece elle çalıştırma talimatı
+    veriyordu — bunu da ekledim.
+  - Kurulum ("Docker" bölümü) migration'ların otomatik uygulandığını,
+    elle adım gerekmediğini zaten doğru anlatıyordu (3f7b2a0'dan beri) —
+    doğruladım, değişiklik gerekmedi.
+  - Görev B'nin sonucunu (`backend/scripts/test-like-ci.sh` ve `.env`
+    notu) da "Quality checks" bölümüne ekledim.
+
+## [2026-08-17 13:10 UTC] Görev B: `.env` tuzağını kalıcı çöz
+- Durum: tamamlandı
+- Seçilen yaklaşım: **Seçenek 1 + Seçenek 2'nin bir kombinasyonu** —
+  ikisi de aynı kök nedenin (`Settings.model_config`'in `../.env`'i her
+  zaman okuması) farklı iki belirtisini hedefliyordu, biri diğerinin
+  yerine geçmiyordu.
+  - **Seçenek 1** (`backend/tests/test_config.py`): denetim sırasında
+    fark ettim ki sorun sandığımdan büyüktü — sadece
+    `test_production_settings_reject_default_database_password` değil,
+    dosyadaki `debug=True`'yu açıkça geçmeyen NEREDEYSE TÜM testler
+    (`require_https`, `reject_default_secret_key`,
+    `reject_wildcard_cors_origin`, `reject_wildcard_trusted_host`,
+    `accept_a_fully_hardened_configuration`) `.env`'in `DEBUG=true`
+    değeri yüzünden "DEBUG must be false" hatasına takılıp asıl test
+    ettikleri kontrole hiç ulaşamıyordu (bunu `TRUSTED_HOSTS`'u override
+    edip `DEBUG`'ı etmeden çalıştırınca 6 testin birden kırmızı
+    olduğunu görerek doğruladım). Dosyadaki her `Settings(...)`
+    çağrısına `_env_file=None` ekledim (pydantic-settings'in
+    resmi per-instance override parametresi) — artık bu testler
+    diskte HANGİ `.env` dursa dursun sadece kendi verdikleri kwarg'lara
+    ve sınıf varsayılanlarına bakıyor, gelecekte de bağışık.
+  - **Seçenek 2** (`backend/scripts/test-like-ci.sh`, yeni): Seçenek 1
+    sadece `test_config.py`'nin kendi `Settings()` çağrılarını
+    kapsıyor — asıl geniş kapsamlı sorun (`TRUSTED_HOSTS`'ta
+    `testserver` eksikliği yüzünden TÜM route testlerinin, `app.main`
+    import edilirken önbelleğe alınan tek bir `get_settings()`
+    singleton'ı üzerinden kırılması) mimari olarak tek tek test
+    fonksiyonlarından çözülemez — `app`/`engine` modül importunda bir
+    kere kuruluyor. Bunun için CI'ın kullandığı değerleri (sınıf
+    varsayılanlarıyla birebir aynı: `TRUSTED_HOSTS` içinde `testserver`,
+    `DEBUG=false`, vb.) ortam değişkeni olarak export edip ruff+mypy
+    --strict+pytest'i sırayla çalıştıran bir script ekledim. Env
+    değişkenleri `.env` dosyasının önüne geçtiği için `.env`'e hiç
+    dokunmuyor/silmiyor.
+  - Doğrulama (`.env` diskte DURURKEN, hiçbir manuel env override
+    olmadan): `backend/scripts/test-like-ci.sh -q` → ruff temiz,
+    mypy --strict temiz, **117 passed** (önceki turun denetiminde
+    117'den 1'i kırmızıydı). Ayrıca sadece `tests/test_config.py`'yi
+    HİÇBİR env değişkeni olmadan çalıştırıp (bare `pytest`) 8/8
+    testin de yeşil olduğunu ayrıca doğruladım — Seçenek 1'in
+    kendi başına da yeterli olduğunu kanıtlıyor.
+  - README'nin "Quality checks" bölümüne script'in ne işe yaradığını
+    ve neden gerektiğini açıklayan bir not eklendi (Seçenek 2'nin
+    istediği gibi).
+
+## DÖRDÜNCÜ TUR TAMAMLANDI
+- A, B: 2/2 görev tamamlandı. Kalite kontrolleri: backend ruff+mypy
+  --strict+pytest (117/117, `.env` diskteyken de) ve frontend
+  lint+build hepsi yeşil.
+- `.env` tuzağı artık sadece belgelenmiş bir sınırlama değil: (1)
+  `test_config.py` kendi başına disk durumundan bağımsız hâle geldi,
+  (2) geniş test paketi için CI-eşdeğeri bir script var ve README bunu
+  öneriyor. Kalan tek gerçek sınırlama: bir geliştirici hâlâ yanlışlıkla
+  bare `pytest` çalıştırabilir ve `test_config.py` dışındaki testlerde
+  eski (farklı) sonuçları görebilir — bunu koddan tamamen imkansız
+  kılmak (`app.main` import zamanında `.env`'i hiç okumamak) gerçek bir
+  mimari değişiklik gerektirirdi, bu turun kapsamı dışında bırakıldı.
