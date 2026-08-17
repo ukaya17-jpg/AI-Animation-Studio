@@ -268,3 +268,33 @@ eklenir.
     `postgres:16`, `alembic upgrade head`, sonra konteyneri silme)
     gerçek bir veritabanına karşı doğruladım — dört migration'ın
     tamamı temiz sırayla uygulandı, `theme_id` indeksi oluştu.
+
+## [2026-08-17 02:35 UTC] Görev 9: Dokümantasyon güncellemesi
+- Durum: tamamlandı
+- Commit: `187d919` README ve architecture.md'yi güncel duruma göre
+  güncelle
+- Test sonucu: backend 94/94, frontend lint+build temiz (dokümantasyon
+  değişikliği, kod dokunulmadı ama protokole göre yine de çalıştırdım)
+- Notlar:
+  - README'ye "Feature highlights" bölümü (20 tema, kalıcı kayıt,
+    karakter/mekan görselleri + alt metni, auth/proje, erişilebilir/
+    responsive UI) ve tam bir API endpoint tablosu ekledim.
+  - Roadmap'i güncellerken bilinçli olarak dürüst kaldım: Sprint 2
+    "tamamlandı" (gerçekten öyle — auth+proje+migration hepsi bu
+    oturumda bitti), ama Sprint 3'ü "tamamlandı" DEĞİL "devam ediyor"
+    olarak işaretledim — çünkü `app/adapters` ve `app/providers`
+    hâlâ boş (sadece `.gitkeep`), gerçek bir dış AI sağlayıcısına
+    (Veo/fal.ai, `docs/veo-fal-ai-research.md`'de araştırılmış) hiç
+    bağlanılmadı. Neşeli Orman modülü tamamen deterministik/sabit
+    içerik bankası tabanlı — bunu "AI adaptörleri" olarak sunmak
+    yanıltıcı olurdu.
+  - `architecture.md`'ye bir "Sprint status" bölümü ekledim ve
+    "Future persistence belongs in models and repositories" cümlesini
+    güncelledim (artık boş değiller). Rate-limit hook'unun hâlâ
+    no-op olduğunu özellikle netleştirdim — eski metin "Sprint 2
+    configures..." diyordu, bu oturumdaki Sprint 2 kapsamı (auth+proje)
+    rate limiting'i içermiyordu, yanlış izlenim bırakmasın diye
+    düzelttim.
+  - `docs/sprint-1-audit.md`'ye dokunmadım — o tarihli, geçmişe dönük
+    bir denetim kaydı; görev metni zaten sadece README ve
+    architecture.md'yi işaret ediyordu.
