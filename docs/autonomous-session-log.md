@@ -30,3 +30,41 @@ eklenir.
     CI'da (.env yok) sorun yok. Test çalıştırırken
     `TRUSTED_HOSTS=... DEBUG=false DATABASE_URL=...` env override
     kullanıyorum; bu oturum boyunca hep aynı pattern'i kullanacağım.
+
+## [2026-08-17 00:15 UTC] Görev 2: Sprint 2 temelleri — kullanıcı ve proje modeli
+- Durum: tamamlandı
+- Commit: `31114eb` Sprint 2 temeli: kullanıcı auth ve proje modeli ekle
+- Test sonucu: 73/73 backend geçti, ruff+mypy --strict temiz, frontend
+  lint+build temiz
+- Notlar:
+  - Konuşma bağlamı bir önceki mesajda sıkıştırılmış (compaction)
+    olmalı: oturuma başladığımda `git status` bu görevin zaten büyük
+    ölçüde kodlanmış ama commit edilmemiş halde olduğunu gösterdi
+    (User/Project modelleri, security.py, auth_service.py,
+    repository'ler, şemalar hazırdı). Bu kodu okuyup doğruladım,
+    eksikleri (auth/projects route'ları, migration, testler) tamamladım.
+  - Şifre hash'i için `bcrypt` kütüphanesini doğrudan kullandım
+    (passlib yerine) — passlib'in bcrypt backend'i güncel bcrypt
+    sürümleriyle uyum sorunları yaşıyor ve proje zaten aktif bakımda
+    değil; doğrudan `bcrypt` daha az bağımlılık ve daha güvenilir.
+  - JWT için mevcut `APP_SECRET_KEY`'i imzalama anahtarı olarak
+    yeniden kullandım — yeni bir gizli anahtar/env değişkeni
+    gerekmedi, `.env.example`'a dokunmadım.
+  - `get_current_user` dependency'si `app/api/dependencies.py`
+    pattern'ine uyacak şekilde eklendi; `Project` route'ları bunun
+    üzerinden owner_id'yi çözüyor (kullanıcı yalnızca kendi
+    projelerini görebiliyor/oluşturabiliyor).
+  - Pydantic response şemalarında (`UserResponse`, `ProjectResponse`)
+    ORM nesnesinden doğrudan `model_validate` çağırınca
+    `from_attributes=True` eksikliği yüzünden test hataları çıktı;
+    `ConfigDict(from_attributes=True)` ekleyerek düzelttim.
+  - `alembic/env.py`'deki import sırası (önceki oturumdan kalma)
+    ruff I001 hatası veriyordu, düzelttim.
+  - Migration'ı elle yazdım (mevcut `generated_episodes` migration'ıyla
+    aynı stilde) — bu ortamda Docker/Postgres çalışmadığı için
+    `alembic revision --autogenerate` kullanamadım; şemayı modellerle
+    elle eşleştirip doğruladım.
+  - Kapsam bilinçli olarak minimal tutuldu: refresh token, şifre
+    sıfırlama, e-posta doğrulama gibi prod-hazır auth özellikleri
+    YOK — görev tanımı ("production'a çıkmaya hazır olması
+    beklenmiyor") ile uyumlu.
