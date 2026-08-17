@@ -1,4 +1,5 @@
 import type { Episode } from '../../types/episode'
+import { VoiceSampleButton } from './VoiceSampleButton'
 
 type EpisodeSummaryProps = { episode: Episode }
 
@@ -18,8 +19,14 @@ export function EpisodeSummary({ episode }: EpisodeSummaryProps) {
           />
           <div>
             <dt className="text-xs uppercase tracking-wide text-slate-500">Ana Karakter</dt>
-            <dd className="mt-1 text-sm font-medium text-slate-200">
-              {episode.lead_character.name} ({episode.lead_character.species})
+            <dd className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-200">
+              <span>
+                {episode.lead_character.name} ({episode.lead_character.species})
+              </span>
+              <VoiceSampleButton
+                src={episode.lead_character.voice_sample_url}
+                characterName={episode.lead_character.name}
+              />
             </dd>
           </div>
         </div>
@@ -31,8 +38,14 @@ export function EpisodeSummary({ episode }: EpisodeSummaryProps) {
           />
           <div>
             <dt className="text-xs uppercase tracking-wide text-slate-500">Destek Karakter</dt>
-            <dd className="mt-1 text-sm font-medium text-slate-200">
-              {episode.support_character.name} ({episode.support_character.species})
+            <dd className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-200">
+              <span>
+                {episode.support_character.name} ({episode.support_character.species})
+              </span>
+              <VoiceSampleButton
+                src={episode.support_character.voice_sample_url}
+                characterName={episode.support_character.name}
+              />
             </dd>
           </div>
         </div>

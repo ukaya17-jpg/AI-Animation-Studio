@@ -28,6 +28,7 @@ class EpisodeCharacter:
     visual_description: str
     voice: VoiceProfile
     image_url: str
+    voice_sample_url: str
 
 
 @dataclass(frozen=True, slots=True)

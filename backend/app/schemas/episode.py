@@ -23,8 +23,10 @@ class ThemeSummaryResponse(BaseModel):
     label: str
     lead_character_name: str
     lead_character_image_url: str
+    lead_character_voice_sample_url: str
     support_character_name: str
     support_character_image_url: str
+    support_character_voice_sample_url: str
     location_name: str
     location_image_url: str
 
@@ -80,8 +82,10 @@ class GeneratedEpisodeSummaryResponse(BaseModel):
     theme_label: str
     lead_character_name: str
     lead_character_image_url: str
+    lead_character_voice_sample_url: str
     support_character_name: str
     support_character_image_url: str
+    support_character_voice_sample_url: str
     location_name: str
     location_image_url: str
     created_at: datetime

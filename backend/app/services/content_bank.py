@@ -29,6 +29,7 @@ _CHARACTERS: tuple[EpisodeCharacter, ...] = (
             catchphrase="Hadi birlikte keşfedelim!",
         ),
         image_url="/static/characters/zeytin.png",
+        voice_sample_url="/static/characters/voices/zeytin.mp3",
     ),
     EpisodeCharacter(
         character_id="findik",
@@ -48,6 +49,7 @@ _CHARACTERS: tuple[EpisodeCharacter, ...] = (
             catchphrase="Paylaşınca daha lezzetli oluyor!",
         ),
         image_url="/static/characters/findik.png",
+        voice_sample_url="/static/characters/voices/findik.mp3",
     ),
     EpisodeCharacter(
         character_id="minik",
@@ -67,6 +69,7 @@ _CHARACTERS: tuple[EpisodeCharacter, ...] = (
             catchphrase="Sanırım... deneyebilirim!",
         ),
         image_url="/static/characters/minik.png",
+        voice_sample_url="/static/characters/voices/minik.mp3",
     ),
     EpisodeCharacter(
         character_id="boncuk",
@@ -86,6 +89,7 @@ _CHARACTERS: tuple[EpisodeCharacter, ...] = (
             catchphrase="Birlikte taşırsak, yük hafifler.",
         ),
         image_url="/static/characters/boncuk.png",
+        voice_sample_url="/static/characters/voices/boncuk.mp3",
     ),
     EpisodeCharacter(
         character_id="papatya",
@@ -105,6 +109,7 @@ _CHARACTERS: tuple[EpisodeCharacter, ...] = (
             catchphrase="Bir, iki, üç... birlikte daha güçlüyüz!",
         ),
         image_url="/static/characters/papatya.png",
+        voice_sample_url="/static/characters/voices/papatya.mp3",
     ),
 )
 
