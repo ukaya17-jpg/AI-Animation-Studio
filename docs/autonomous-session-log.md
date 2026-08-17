@@ -68,3 +68,32 @@ eklenir.
     sıfırlama, e-posta doğrulama gibi prod-hazır auth özellikleri
     YOK — görev tanımı ("production'a çıkmaya hazır olması
     beklenmiyor") ile uyumlu.
+
+## [2026-08-17 00:45 UTC] Görev 3: Üretilen bölümleri projeye bağla
+- Durum: tamamlandı
+- Commit: `68a2ea2` Üretilen bölümleri projeye bağla (nullable project_id)
+- Test sonucu: 78/78 backend geçti, ruff+mypy --strict temiz, frontend
+  lint+build temiz
+- Notlar:
+  - `GeneratedEpisode.project_id` nullable FK olarak eklendi; repository,
+    service (`generate`, `list_generated_episodes`) ve `/episodes`
+    route'ları `project_id`'yi opsiyonel parametre/query olarak taşıyor.
+    Hiçbir mevcut çağrı (project_id'siz) davranış değiştirmedi — tüm
+    eski testler değişmeden geçti.
+  - Response şemalarına (`EpisodeGenerationResponse`,
+    `GeneratedEpisodeSummaryResponse`) da `project_id` ekledim ki
+    frontend ileride bir bölümün hangi projeye ait olduğunu
+    gösterebilsin/filtreleyebilsin — görev metni bunu zorunlu kılmıyordu
+    ama minimal ve geriye dönük uyumlu bir ek olduğu için dahil ettim.
+  - Frontend `episode.ts` tiplerini ve `episodesApi.ts`'i de yeni alanı
+    taşıyacak şekilde güncelledim (henüz hiçbir ekran project_id
+    kullanmıyor/göstermiyor — bu UI çalışması backlog'da yok, sadece
+    tip/istemci sözleşmesini tutarlı tuttum).
+  - Migration'ı yine elle yazdım (afe976b06519 → 2d5160e78e57 →
+    5d693758d125 zinciri), Postgres burada çalışmadığı için
+    autogenerate kullanamadım (Görev 2'deki notla aynı sınırlama).
+  - Route'ta `project_id: uuid.UUID | None = Query(default=None)`
+    satırında ruff B008 uyarısı çıktı (mevcut `page`/`page_size`
+    Query() satırları neden tetiklemiyor tam anlayamadım — muhtemelen
+    ruff'ın iç sezgisel kuralı), kod tabanındaki yerleşik desene uyarak
+    `# noqa: B008` ekledim.
