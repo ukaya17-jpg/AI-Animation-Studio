@@ -29,7 +29,7 @@ class GeneratedEpisode(Base):
     project_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("projects.id"), nullable=True, index=True
     )
-    theme_id: Mapped[str] = mapped_column(Text, nullable=False)
+    theme_id: Mapped[str] = mapped_column(Text, nullable=False, index=True)
     theme_label: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     lead_character_id: Mapped[str] = mapped_column(Text, nullable=False)
