@@ -26,7 +26,7 @@ cd backend && python -m venv .venv && .venv/bin/pip install -e '.[dev]'
 cd ../frontend && npm install
 ```
 
-Run the API with `cd backend && .venv/bin/uvicorn app.main:app --reload`; run the UI with `cd frontend && npm run dev`. Liveness is available at `http://localhost:8000/health`; dependency readiness is available at `http://localhost:8000/health/ready`.
+Against a running PostgreSQL, apply migrations with `cd backend && .venv/bin/alembic upgrade head`. Run the API with `.venv/bin/uvicorn app.main:app --reload`; run the UI with `cd frontend && npm run dev`. Liveness is available at `http://localhost:8000/health`; dependency readiness is available at `http://localhost:8000/health/ready`.
 
 ## Docker
 
@@ -36,7 +36,7 @@ Copy `.env.example` to `.env`, choose a secure `POSTGRES_PASSWORD`, then run:
 docker compose up --build
 ```
 
-The command starts frontend, backend, PostgreSQL, and Redis. The frontend runs at `http://localhost:5173` and the API at `http://localhost:8000`.
+The command starts frontend, backend, PostgreSQL, and Redis. The backend container applies pending Alembic migrations automatically before it starts serving traffic (see `docker/backend-entrypoint.sh`); if a migration fails, the container exits with a non-zero status instead of starting against a stale schema — no manual migration step is needed. The frontend runs at `http://localhost:5173` and the API at `http://localhost:8000`.
 
 ## API endpoints
 
