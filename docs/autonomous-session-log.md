@@ -171,3 +171,47 @@ eklenir.
     bir araçla ölçmedim — bu ortamda axe-core/lighthouse kurulu değil
     ve görev metni özellikle görsel alt/aria-label istiyordu, kontrast
     denetimini istemedi).
+
+## [2026-08-17 01:55 UTC] Görev 6: Test kapsamını genişlet
+- Durum: tamamlandı
+- Commit: `f18721e` Test kapsamını kritik eksik alanlarda genişlet
+- Test sonucu: backend 94/94 (86'dan 94'e çıktı), ruff+mypy --strict
+  temiz, frontend lint+build temiz (frontend'de değişiklik yok)
+- Notlar:
+  - Backend: `.venv/bin/python -m pip` yok (uv-yönetimli venv, pip
+    modülü kurulu değil), bu yüzden `uv pip install --python
+    .venv/bin/python pytest-cov` ile geçici olarak kurdum, coverage
+    raporu aldım (%92 genel), sonra `uv pip uninstall` ile geri aldım
+    — `pyproject.toml`/`uv.lock`'a hiç dokunmadım (proje bağımlılığı
+    olarak eklenmedi, sadece bir kerelik teşhis aracıydı).
+  - Rapor gerçek boşlukları gösterdi: `app/core/config.py`'deki
+    production guard dallarının (APP_SECRET_KEY varsayılanı, wildcard
+    CORS_ORIGINS, wildcard TRUSTED_HOSTS, boş TRUSTED_HOSTS) hiçbiri
+    test edilmiyordu — bu güvenlik açısından kritik bir dosya
+    olduğundan öncelik verdim. Ayrıca görevin verdiği örneklere birebir
+    uyan: bozuk JSON gövdesi, `page_size`/`page` sınır ihlali,
+    `<script>`-benzeri girdi testlerini ekledim.
+  - Yeni bir `test_production_settings_reject_default_secret_key`
+    testi ilk denemede FAILED verdi: `.env` dosyasındaki gerçek
+    (rotate edilmiş) `APP_SECRET_KEY` sınıf varsayılanının yerini
+    alıyordu (Görev 1'de DATABASE_URL için tespit edilen aynı yerel-
+    `.env` tuzağı, bu sefer farklı bir alanda). Testte `app_secret_key`
+    değerini açıkça `"development-only-secret-change-me"` olarak
+    geçerek düzelttim.
+  - `app/api/dependencies.py:72-74` (silinmiş kullanıcıya ait geçerli
+    token → 401) ve `app/api/routes/auth.py`'deki except/return
+    satırları için test ekledim/doğruladım, ama coverage raporu bu
+    satırları hâlâ "missing" gösterdi — testleri tek tek çalıştırıp
+    gerçekten 401/409 döndürdüklerini doğruladım (evet, doğru
+    davranıyorlar). Bunun coverage.py'nin async/await + SQLAlchemy
+    event-loop geçişleriyle bilinen bir satır-izleme tutarsızlığı
+    olduğunu değerlendirdim — gerçek bir test boşluğu değil, bir
+    araç artefaktı; daha fazla zaman harcamadım.
+  - Frontend'de hiç test çalıştırıcısı (Jest/Vitest) kurulu değil
+    (`frontend/tests/` sadece `.gitkeep` içeriyor, `package.json`'da
+    `test` script'i yok). Bunu sıfırdan kurmak bu görevin kapsamının
+    ötesinde büyük bir iş olurdu; görev metni zaten "coverage raporu
+    varsa çalıştır" diyordu (yok, o yüzden atlandı) ve somut örnekler
+    (bozuk JSON, sayfalama, XSS) backend API'ye özgüydü. Bunu Görev 10
+    adayı olarak not düşüyorum: bir sonraki oturumda düşük riskli bir
+    Vitest+Testing Library kurulumu değerli olabilir.
