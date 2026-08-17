@@ -416,3 +416,42 @@ doğrulamak için `docker compose up --build -d` çalıştırıldı.
   gelecek oturum için net bir aday.
 - Doğrulama sonrası `docker compose down` (volume'ler SİLİNMEDİ,
   `-v` kullanılmadı) ile temiz bir şekilde kapatıldı.
+
+---
+
+# İkinci tur: A (güvenlik) / B (Docker migration) / C (frontend auth)
+
+Bu tur, önceki turun sonunda kullanıcının doğrulama sırasında bulduğu
+iki boşluğa (project_id sahiplik kontrolü eksik, Docker'da migration
+otomatik değil) ve backend'de var olup frontend'de hiç kullanılmayan
+auth'a yönelik.
+
+## [2026-08-17 03:45 UTC] Görev A: project_id sahiplik kontrolü (GÜVENLİK)
+- Durum: tamamlandı
+- Commit: `19b4a3d` GÜVENLİK: project_id verilen episode uçlarına
+  sahiplik kontrolü ekle
+- Test sonucu: backend 110/110 (103'ten 110'a çıktı), ruff+mypy --strict
+  temiz, frontend lint+build temiz (bu görev backend-only)
+- Notlar:
+  - `get_optional_current_user` diye yeni bir dependency ekledim:
+    `get_current_user`'dan farkı, token yoksa VEYA geçersizse hata
+    fırlatmak yerine `None` dönüyor. Bunu bilinçli seçtim: eğer
+    geçersiz/bozuk bir token her zaman 401 fırlatsaydı, `project_id`
+    hiç kullanılmayan tamamen anonim isteklerde bile (ör. biri yanlışlıkla
+    eski/bozuk bir `Authorization` header'ı gönderirse) beklenmedik
+    401'ler çıkardı — görev metninin "project_id verilmezse hiçbir şey
+    değişmesin" şartını ihlal ederdi.
+  - `project_id` verildiğinde: `current_user is None` → 401; proje yoksa
+    ya da `owner_id` eşleşmiyorsa → 403 (ikisi aynı koda katlandı, kaynak
+    varlığını sızdırmamak için — görev metninin kendi önerisiydi).
+  - `GET /episodes/{id}` ve `DELETE /episodes/{id}` bilerek dokunulmadı:
+    bunlar `project_id` parametresi almıyor, görev metni sadece
+    "project_id alan uçlar" diyordu. Bunun kendisi hâlâ bir artık —
+    biri bir bölümün UUID'sini bilirse/tahmin ederse, o bölüm bir
+    projeye bağlı olsa bile `GET /episodes/{id}` ile detayını görebiliyor
+    (sahiplik kontrolü yok). Kapsam dışı bıraktım ama bir sonraki
+    güvenlik turu için not düşüyorum.
+  - Var olan iki testi (`project_id` ile üretim/listeleme) artık auth
+    header göndermek için güncelledim — bunlar önceden auth'suz
+    çalışıyordu, şimdi 401 alacaklardı; davranış kasıtlı olarak
+    sıkılaştırıldığı için testler de buna uyarlandı, regresyon değil.
