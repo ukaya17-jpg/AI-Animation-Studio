@@ -298,3 +298,88 @@ eklenir.
   - `docs/sprint-1-audit.md`'ye dokunmadım — o tarihli, geçmişe dönük
     bir denetim kaydı; görev metni zaten sadece README ve
     architecture.md'yi işaret ediyordu.
+
+## [2026-08-17 03:05 UTC] Görev 10: Redis tabanlı rate limiting (opsiyonel)
+- Durum: tamamlandı
+- Commit: `6ccd9d7` Opsiyonel Redis tabanlı rate limiting ekle
+  (varsayılan kapalı), `36d9e8b` dokümantasyon senkronizasyonu
+- Test sonucu: backend 103/103 (94'ten 103'e çıktı), ruff+mypy --strict
+  temiz, frontend lint+build temiz
+- Neden bunu seçtim: görev metninin kendisi örnek olarak "rate
+  limiting, request logging, health check'lerin genişletilmesi"
+  veriyordu. `docs/architecture.md` zaten `core/rate_limit.py`'de bir
+  `RateLimiter` Protocol'ü ve `NoopRateLimiter`'ı rezerve ediyordu
+  ("no-op until Sprint 2 configures a Redis-backed policy" notuyla) —
+  Sprint 2'yi bu oturumda ben bitirdim ama rate limiting kapsamına
+  hiç girmemişti. En somut risk: `/auth/login`'de HİÇ deneme sınırı
+  yoktu (brute-force/credential-stuffing açığı). Bu hem düşük riskli
+  (opt-in, varsayılan davranış değişmiyor) hem yüksek değerli
+  (gerçek bir güvenlik boşluğunu kapatıyor) bir seçimdi.
+  - Tasarım: sabit pencereli (fixed-window, Redis INCR+EXPIRE) sayaç,
+    istemci IP'sine göre. `/auth/login` ve `/auth/register` için sıkı
+    bütçe (10 istek/60sn), diğer her şey için gevşek varsayılan
+    (120 istek/60sn) — tek bir global limit koymadım çünkü bu,
+    `/episodes` gibi normal kullanım rotalarını login'le aynı
+    kovaya koyup meşru trafiği kısıtlayabilirdi.
+  - Güvenlik: yeni `RATE_LIMIT_ENABLED` ayarı varsayılan `false`.
+    Bunu bilinçli olarak seçtim çünkü rate limiter modül import
+    zamanında (`app/api/middleware.py`'de) inşa ediliyor — eğer
+    varsayılan olarak Redis'e bağlanmaya çalışsaydı, bu ortamda
+    (Redis çalışmıyor) TÜM test paketi ve muhtemelen `uvicorn`
+    başlatma bile bozulurdu. Opt-in olması, davranışı hiçbir ek
+    yapılandırma yapılmadan tamamen değişmez kılıyor.
+  - Gerçek bir hata yakaladım ve düzelttim: `TooManyRequestsError`'ı
+    `@app.middleware("http")` fonksiyonu içinden fırlatmak, kayıtlı
+    `app.add_exception_handler`'a hiç uğramıyordu (Starlette'in bu tarz
+    middleware'leri `ExceptionMiddleware`'in DIŞINDA çalışıyor) — sonuç
+    429 yerine ham bir 500 oluyordu. Bunu uçtan uca bir test (gerçek
+    `app` + sahte Redis, `monkeypatch.setattr`) ile yakaladım; düzeltme
+    429'u doğrudan middleware içinde try/except ile döndürmek oldu.
+    Bu, "her adımda gerçekten test et" disiplininin bu oturumda ikinci
+    kez gerçek bir hata yakaladığı an (birincisi Görev 4'teki mobil
+    taşma).
+  - `RedisRateLimiter`'ı test etmek için `redis.asyncio.Redis`'i
+    minimal bir `Protocol` ile soyutlamayı denedim, ama redis-py'nin
+    gerçek metod imzaları (overload'lar, `bytes|str|memoryview`
+    parametreleri) mypy --strict ile yapısal olarak uyuşmadı; bunun
+    yerine doğrudan `Redis` tipini kullandım (`app/database/redis.py`
+    zaten aynı `cast(...)` deseniyle bu sürtünmeyi kabul ediyordu) ve
+    testte sahte bir istemciyi mypy'nin görmediği `tests/` altında
+    kullandım (CI zaten sadece `mypy app` çalıştırıyor, `tests` değil).
+  - Migration/DB değişikliği yok (Redis key'leri şemasız). Docker
+    Compose ve `.env.example`'a `RATE_LIMIT_ENABLED=false` placeholder
+    olarak eklendi — gerçek bir sır değil.
+
+## OTURUM TAMAMLANDI
+- Toplam: 10/10 görev tamamlandı (hiçbiri atlanmadı), ~14 commit
+  (kod + günlük girişleri dahil), hepsi `main`'e push edildi.
+- Görev 1: zaten tamamlanmıştı (önceki oturumda doğrulanıp bitirilmiş).
+- Görev 2–9: sırayla tamamlandı, her biri kendi commit'i ve test
+  sonucuyla günlüklendi (yukarı bakın).
+- Görev 10: backlog bittiği için kendi seçtiğim ek iş olarak opsiyonel
+  Redis tabanlı rate limiting eklendi (varsayılan kapalı, `/auth/login`
+  için özellikle önemli bir güvenlik sertleştirmesi).
+- Backend testleri: 59 (oturum başı) → 103 (oturum sonu). Tüm testler,
+  ruff, mypy --strict ve frontend lint+build her commit'ten önce yeşildi.
+- Kullanıcının gözden geçirmesi gereken kritik noktalar:
+  1. **Auth kapsamı minimal** (Görev 2 notları): refresh token, şifre
+     sıfırlama, e-posta doğrulama yok — bilinçli bir kapsam kararıydı,
+     prod'a çıkmadan önce gözden geçirilmeli.
+  2. **Üç migration da hiç `alembic revision --autogenerate` ile
+     üretilmedi**, elle yazıldı (bu ortamda Postgres autogenerate için
+     erişilebilir değildi) — ama hepsi Görev 7/8'de gerçek bir Docker
+     Postgres'ine karşı hem upgrade hem downgrade olarak doğrulandı.
+  3. **Frontend'de hiç test çalıştırıcısı yok** (Vitest/Jest) — Görev
+     6'da bilinçli olarak atlandı (kapsam dışı, büyük bir kurulum işi),
+     ama sonraki oturum için iyi bir aday.
+  4. **Rate limiting varsayılan kapalı** (`RATE_LIMIT_ENABLED=false`)
+     — prod'a çıkmadan önce `true` yapılması ve gerçek trafik
+     paternleriyle bütçelerin (10/60sn auth, 120/60sn genel) gözden
+     geçirilmesi öneriliyor.
+  5. Bu makinedeki lokal `.env` dosyası (rotate edilmiş DB şifresi ve
+     APP_SECRET_KEY, TRUSTED_HOSTS'ta testserver eksik) pytest'in
+     varsayılan `Settings()` değerlerine güvenen testleri CI'dan farklı
+     davrandırabiliyor — bu oturum boyunca hep açık env override
+     kullandım, ama gelecekte lokal test çalıştıran biri aynı tuzağa
+     düşebilir. Kalıcı bir çözüm (ör. testler için ayrı bir
+     `.env.test` veya pytest'in `.env`'i hiç okumaması) değerlendirilebilir.
