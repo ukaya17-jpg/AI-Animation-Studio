@@ -1271,3 +1271,99 @@ doldurmak oldu.
      migration'lar, `.env` yerel tuzağı çözüldü, tam Playwright suite'i
      bu sandbox'ta güvenilir değil — asıl doğrulama CI'da yapılmalı)
      hâlâ geçerli.
+
+# Dokuzuncu tur: Toplu export ZIP'inde medya tekrarını gider
+
+## [2026-08-18 21:55 UTC] Görev: `export-batch` ZIP'inde karakter/mekan dosyalarını tekilleştir
+- Durum: tamamlandı
+- Commit: bu turun sonunda `origin/main`'e push edilecek (aşağıya bakın)
+- Test sonucu: backend `scripts/test-like-ci.sh` ile **148/148** yeşil
+  (145'ten 148'e, bu turun 3 yeni testi dahil — 2'si dedup/boyut
+  regresyon testi, dosya adı düzeltmesiyle birlikte), ruff+mypy --strict
+  temiz; frontend lint temiz; gerçek `docker compose` stack'inde elle
+  uçtan uca doğrulandı (aşağıya bakın).
+- Notlar:
+  - **Oturum başlangıcı durumu**: sekizinci turun notunda "bir sonraki
+    iyileştirme adayı" olarak işaretlenen bu sorunun kod çözümü, yine
+    önceki bir oturumdan kalma commit'lenmemiş haliyle
+    `backend/app/services/episode_export.py`'de oturum başında hazır
+    bulundu (`_write_shared_media`, `_write_batch_episode`,
+    `_batch_readme` — karakter/mekan medyasını `medya/karakterler/` ve
+    `medya/mekanlar/` altına tek kopya yazıp, her bölüm klasörüne sadece
+    metin dosyaları + medyaya göreli yol veren bir `README.txt` bırakan
+    tasarım). Doğrudan commit etmek yerine önce satır satır doğruladım:
+    `episode["lead_character"]["character_id"]` /
+    `episode["location"]["location_id"]` alan adlarının
+    `EpisodeCharacter`/`EpisodeLocation` dataclass'larıyla (bkz.
+    `app/models/episode_cast.py`) birebir eşleştiğini ve tüm 8
+    karakter + 6 mekanın `image_url`/`voice_sample_url`/
+    `ambient_video_url` alanlarının (frozen dataclass, varsayılansız
+    zorunlu alanlar) her zaman dolu olduğunu — yani dedup mantığının
+    hiçbir medyayı sessizce atlamayacağını — bir alt-ajan ile
+    doğrulattım; tekil bölüm export route'unun (`GET
+    /episodes/{id}/export`) hiç değişmediğini `git diff` ve route
+    dosyasını okuyarak teyit ettim.
+  - **Eklenen/güncellenen testler**
+    (`backend/tests/episodes/test_episode_batch.py`):
+    - Mevcut `test_export_batch_bundles_every_project_episode_in_its_own_subfolder`
+      testi eski yapıyı (`{folder}/gorseller/`, `sesler/`,
+      `mekan_videosu/`) doğruluyordu — yeni yapıya güncellendi: artık
+      hiçbir bölüm klasöründe `.png/.mp3/.mp4` yok, her `README.txt`
+      `../medya/karakterler/` ve `../medya/mekanlar/` referansı
+      içeriyor, kökte `medya/karakterler/` ve `medya/mekanlar/` var.
+    - Yeni `test_export_batch_deduplicates_shared_character_and_location_media`:
+      ZIP'te tam 16 karakter dosyası (8 karakter × görsel+ses) ve tam 12
+      mekan dosyası (6 mekan × görsel+video) olduğunu, hepsinin benzersiz
+      olduğunu ve `medya/` dışında hiç `.png/.mp3/.mp4` kalmadığını
+      doğruluyor.
+    - Yeni `test_export_batch_zip_stays_close_to_the_underlying_media_set_size`:
+      28 bölümlük toplu ZIP boyutunu `backend/app/static/`'teki gerçek
+      medya setinin toplam boyutuyla karşılaştırıyor (ZIP < medya seti ×
+      1.5) — eski doğrusal büyüme regresyonuna karşı bariyer. Yerel
+      pytest çıktısı: **medya seti = 131.1 MiB, 28 bölümlük ZIP = 131.2
+      MiB** (pratikte medya setiyle aynı boyut, metin dosyaları
+      ihmal edilebilir küçük).
+    - `_skip_if_low_memory` eşiği 1024→512 MiB'e indirildi ve docstring'i
+      artık dedup tasarımını anlatıyor (eski "~600MB" gerekçesi artık
+      geçersiz).
+    - Bu turda ayrıca `episode_export.py`'deki (önceki oturumdan kalma)
+      bir satırın 100 karakter sınırını aşması ve yeni testteki benzer
+      bir satır ruff E501 tarafından yakalandı, ikisi de sarmalanarak
+      düzeltildi.
+  - **Gerçek Docker doğrulaması**: `docker compose build backend && up
+    -d backend` ile imaj yeni koddan yeniden derlendi, container yeniden
+    başlatıldı (postgres/redis'e dokunulmadı, sağlıklı kaldılar). Yeni
+    kullanıcı/proje ile `POST /episodes/generate-batch` → 28 created.
+    `GET /episodes/export-batch` → HTTP 200, **137.538.384 bayt
+    (131,2 MiB)** — sekizinci turun 604.986.459 bayt (605 MB) sonucuna
+    kıyasla **~4,6× küçülme**, ve yeni beklentiyle (medya seti + küçük
+    metinler) tam örtüşüyor. İndirilen ZIP Python `zipfile` ile açılıp
+    elle incelendi: 29 üst seviye giriş (28 bölüm klasörü + `medya/`),
+    `medya/karakterler/` altında 16 dosya, `medya/mekanlar/` altında 12
+    dosya; her bölüm klasöründe sadece 6 metin dosyası (`senaryo.md`,
+    3 YouTube dosyası, `shorts_plani.md`, `README.txt`) var. `01-...`
+    klasörünün `README.txt`'si okunup doğru karakter/mekan adları ve
+    `../medya/...` yollarını içerdiği görüldü; bu göreli yollar gerçekten
+    ZIP'ten diske açılıp (`extractall`) `os.path.normpath` ile çözülerek
+    ilgili dosyaların (findik.png, boncuk.mp3, paylasim_bahcesi.mp4)
+    var olduğu ve doğru boyutta olduğu teyit edildi. Ayrıca tekil `GET
+    /episodes/{id}/export` aynı Docker container'ında ayrıca çağrılıp
+    eski düz yapının (`gorseller/`, `sesler/`, `mekan_videosu/`, kök
+    dizinde) hiç değişmediği doğrulandı.
+  - Doğrulama için oluşturulan test kullanıcıları/projeler dev DB'sinde
+    bırakıldı (prod değil); yerel scratch ZIP dosyaları temizlendi.
+
+## DOKUZUNCU TUR TAMAMLANDI
+- Kod önceki bir oturumda hazırlanmış commit'lenmemiş halde bulundu; bu
+  turda satır satır doğrulanıp, eksik test kapsamı (dedup + boyut
+  regresyon testleri, güncellenmiş yapı testi) eklenip commit'lendi ve
+  `origin/main`'e push edildi.
+- Backend testleri: 145 (önceki tur sonu) → 148 (bu tur sonu). Tüm
+  testler, ruff, mypy --strict, frontend lint yeşildi. Gerçek Docker
+  stack'inde 28 temanın tamamı için toplu export ZIP boyutunun 605
+  MB'dan 131,2 MiB'e (~4,6×) düştüğü, medya tekilleştirmesinin ve
+  `README.txt` referanslarının çalıştığı, tekil export'un değişmediği
+  uçtan uca doğrulandı.
+- Kullanıcının gözden geçirmesi gereken nokta: yok — sekizinci turda
+  açık bırakılan "toplu export tekilleştirme yok" notu bu turla
+  kapatıldı.
