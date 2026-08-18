@@ -980,3 +980,64 @@ vermesi.
   4. Önceki turların tüm diğer notları (auth kapsamı minimal, elle
      yazılan migration'lar, yerel `.env` tuzağı, çoklu proje seçimi
      eksikliği) hâlâ geçerli.
+
+---
+
+# Altıncı tur: Git LFS + tekil bölüm prodüksiyon paketi ZIP'i
+
+Not: Bu girişler geriye dönük eklendi — turun kendisi zamanında
+tamamlanıp push edildi (`3c258d2`, `adad19e`), ama oturum kapanmadan
+önce günlüğe yazılmamıştı. Bir sonraki turun ilk adımı bu boşluğu
+doldurmak oldu.
+
+## [2026-08-18 08:01 UTC] Görev A: Git LFS kurulumu
+- Durum: tamamlandı
+- Commit: `3c258d2`
+- Notlar:
+  - Beşinci turun notu (62 MB'lık video eklenince `.git`'in de aynı
+    miktarda büyüdüğü, Git LFS kullanılmadığı) burada ele alındı.
+  - Sadece ileriye dönük bir `.gitattributes` kuralı eklendi
+    (`backend/app/static/**/*.{mp4,png,mp3}` → `filter=lfs`); mevcut
+    geçmiş KASITLI olarak yeniden yazılmadı (`git filter-repo`/`BFG` ile
+    tarihi düzeltmek riskli ve bu turun kapsamı dışında bırakıldı).
+    Yani `.git`'teki mevcut 62 MB'lık şişkinlik olduğu gibi duruyor;
+    kazanç sadece BUNDAN SONRA eklenecek/değişecek statik ikili
+    dosyalar için.
+  - Doğrulama: `git lfs ls-files` kuraldan sonra boş döndü (beklenen —
+    henüz yeni bir binary eklenmedi); `.gitattributes`'in kapsamı
+    bilinçli olarak `backend/app/static/**` ile sınırlı tutuldu ki
+    repodaki ilgisiz gelecekteki başka binary'ler sessizce LFS'e
+    yönlendirilmesin.
+
+## [2026-08-18 08:49 UTC] Görev B: bölümü YouTube prodüksiyon paketi ZIP'i olarak dışa aktarma
+- Durum: tamamlandı
+- Commit: `adad19e`
+- Notlar:
+  - Yeni `GET /episodes/{episode_id}/export` endpoint'i ve
+    `EpisodeExportService` (`backend/app/services/episode_export.py`)
+    eklendi: senaryo (`senaryo.md`), SEO metinleri (başlık/açıklama/
+    etiket), Shorts kurgu planı, ve karakter/mekan referans medyasını
+    (görseller, ses örnekleri, mekan videosu — hepsi zaten static
+    olarak servis edilen dosyalar) tek bir ZIP'te birleştiriyor.
+  - Görünürlük kuralı, mevcut `GET /episodes/{id}` ile birebir aynı
+    tutuldu: projeye bağlı bölümler sadece proje sahibi tarafından
+    indirilebilir (401/403), projesiz/anonim bölümler açık kalıyor —
+    ayrı bir yetkilendirme mantığı icat edilmedi,
+    `_authorize_project_access` aynen tekrar kullanıldı.
+  - Frontend: `ExportButton.tsx` (senkron `<a download>` tetiklemesi,
+    blob + `Content-Disposition`'dan dosya adı ayrıştırma) hem bölüm
+    detay görünümüne hem `EpisodeHistoryList`'teki her karta eklendi.
+    Playwright testi (`episode-export.spec.ts`) her iki indirme
+    noktasını da gerçek bir `download` event'i bekleyerek doğruluyor.
+  - Test: 6 backend testi (ZIP içeriği/isimleri, 404, auth/sahiplik
+    401/403/200, projesiz bölüm için açık erişim) + 1 e2e testi.
+  - Doğrulama (bu turun başında, geriye dönük): `backend/scripts/test-like-ci.sh`
+    ile 123/123 (bu görevin 6 testi dahil), ruff+mypy --strict temiz;
+    frontend lint+build temiz; CI'da HEAD commit'i (`adad19e`) için
+    gerçek bir GitHub Actions run'ı (`32118392513`) yeşil.
+
+## ALTINCI TUR (A+B) TAMAMLANDI
+- Git LFS ileriye dönük kural + tekil bölüm ZIP export'u: 2/2 görev
+  tamamlandı, CI'da yeşil, main'e push edilmiş durumda.
+- Tek gerçek eksik bu turun kendisiyle ilgili değildi: günlük girişinin
+  zamanında yazılmamış olmasıydı — bu girişle kapatıldı.
