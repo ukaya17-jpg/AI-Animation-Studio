@@ -943,3 +943,40 @@ vermesi.
   - Düzeltme sonrası: frontend lint+build tekrar temiz. Yeni commit
     push edildi, CI'da e2e job'u tekrar izlendi (aşağıdaki girişe
     bakın).
+
+## [2026-08-18 07:11 UTC] CI'da yeşil: özellik tamamlandı
+- Durum: tamamlandı
+- Test sonucu: **GERÇEK GitHub Actions'ta doğrulandı** (`gh run view
+  32109973151`) — Backend, Frontend, **E2E (Playwright) hepsi ✓
+  success**. Bir önceki (`32108709295`) koşuda e2e kırmızıydı, sadece
+  yukarıdaki locator düzeltmesinden sonra (`cb2ad89`) yeşile döndü —
+  yani düzeltmenin gerçekten işe yaradığı CI'ın kendi runner'ında
+  kanıtlandı, varsayılmadı.
+- main'de son commit: `cb2ad89`.
+
+## BEŞİNCİ TUR TAMAMLANDI
+- Görev: 4 mekana ambient loop video entegrasyonu — tamamlandı, CI'da
+  yeşil.
+- Backend testleri: 117/117, ruff+mypy --strict temiz. Frontend
+  lint+build temiz. Docker'da video servis (200) ve API alanı
+  (`location_ambient_video_url`) doğrudan curl ile doğrulandı. E2E
+  (Playwright) CI'da yeşil (bu makinede RAM baskısı yüzünden
+  güvenilir değildi — bkz. yukarıdaki notlar, 3. turdaki ilkeye
+  uyularak gerçek doğrulama CI'a bırakıldı ve CI gerçek bir hata
+  (locator kapsamı) yakalayıp doğruladı).
+- Kullanıcının gözden geçirmesi gereken noktalar:
+  1. Repo'ya 62 MB video eklendi (`backend/app/static/locations/videos/`)
+     — `.git` de aynı miktarda büyüdü. Git LFS kullanılmıyor; daha
+     fazla mekan/video eklenecekse bu değerlendirilmeli.
+  2. Bu sandbox makinesinde Playwright'ın video içeren sayfalarda
+     "Target crashed" ile çökmesi, CI'da OLMAYAN, sadece bu paylaşımlı
+     makineye özgü bir RAM baskısı sorunu (3. turda da belgelenmişti,
+     bu turda tekrar doğrulandı — A/B testiyle: orijinal videosuz kod
+     aynı adımda çökmüyordu).
+  3. `LocationMedia.tsx` component'i hem `ThemePicker` hem
+     `EpisodeSummary` tarafından paylaşılıyor — video sadece
+     `IntersectionObserver` ile görünür alandayken oynuyor, yüklenemezse
+     statik görsele düşüyor.
+  4. Önceki turların tüm diğer notları (auth kapsamı minimal, elle
+     yazılan migration'lar, yerel `.env` tuzağı, çoklu proje seçimi
+     eksikliği) hâlâ geçerli.
