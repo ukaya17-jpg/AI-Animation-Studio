@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { LoadingState } from '../LoadingState'
+import { ProjectCard } from './ProjectCard'
 import { useAuth } from '../../lib/useAuth'
 import { toFriendlyErrorMessage } from '../../lib/errors'
 import { fetchGeneratedEpisodes } from '../../lib/episodesApi'
@@ -114,7 +115,11 @@ export function ProjectsPage() {
       )}
 
       <div className="mt-8">
-        {loading && <LoadingState label="Projeler yükleniyor…" />}
+        {/* Only the very first load blanks the section out; a background refresh
+            triggered later (e.g. after a per-project batch action) keeps the
+            existing list mounted so ProjectCard doesn't lose its own local
+            state (a batch result summary, a download error, ...) mid-flight. */}
+        {loading && projects.length === 0 && <LoadingState label="Projeler yükleniyor…" />}
         {error && (
           <p
             role="alert"
@@ -126,23 +131,15 @@ export function ProjectsPage() {
         {!loading && !error && projects.length === 0 && (
           <p className="text-sm text-slate-400">Henüz bir proje oluşturmadın.</p>
         )}
-        {!loading && !error && projects.length > 0 && (
+        {projects.length > 0 && (
           <ul className="space-y-4">
             {projects.map((project) => (
-              <li key={project.id} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-                <h2 className="text-lg font-semibold text-slate-100">{project.name}</h2>
-                {project.episodes.length === 0 ? (
-                  <p className="mt-2 text-sm text-slate-500">Bu projeye henüz bölüm kaydedilmedi.</p>
-                ) : (
-                  <ul className="mt-2 space-y-1">
-                    {project.episodes.map((episode) => (
-                      <li key={episode.id} className="text-sm text-slate-300">
-                        {episode.title}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
+              <ProjectCard
+                key={project.id}
+                project={project}
+                episodes={project.episodes}
+                onEpisodesChanged={loadProjects}
+              />
             ))}
           </ul>
         )}

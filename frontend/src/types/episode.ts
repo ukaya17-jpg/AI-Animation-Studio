@@ -112,3 +112,16 @@ export type GeneratedEpisodeList = {
   page: number
   page_size: number
 }
+
+export type BatchGeneratedEpisodeItem = {
+  id: string
+  theme_id: string
+  theme_label: string
+  title: string
+}
+
+export type EpisodeBatchGenerateResult = {
+  project_id: string | null
+  created: BatchGeneratedEpisodeItem[]
+  skipped_theme_ids: string[]
+}

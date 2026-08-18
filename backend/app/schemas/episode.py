@@ -16,6 +16,29 @@ class EpisodeGenerateRequest(BaseModel):
     project_id: uuid.UUID | None = None
 
 
+class EpisodeBatchGenerateRequest(BaseModel):
+    """Validated input accepted by the batch episode generation endpoint."""
+
+    project_id: uuid.UUID | None = None
+
+
+class BatchGeneratedEpisodeItem(BaseModel):
+    """One episode created by a batch-generate call."""
+
+    id: uuid.UUID
+    theme_id: str
+    theme_label: str
+    title: str
+
+
+class EpisodeBatchGenerateResponse(BaseModel):
+    """Result of generating every theme's episode for one project in one call."""
+
+    project_id: uuid.UUID | None
+    created: list[BatchGeneratedEpisodeItem]
+    skipped_theme_ids: list[str]
+
+
 class ThemeSummaryResponse(BaseModel):
     """A theme's id, Turkish label, and cast/location images, for a theme picker."""
 

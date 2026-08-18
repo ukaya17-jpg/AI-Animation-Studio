@@ -76,6 +76,22 @@ class GeneratedEpisodeRepository:
         )
         return list(rows.all()), total or 0
 
+    async def list_theme_ids_for_project(self, project_id: uuid.UUID) -> set[str]:
+        """Return the distinct theme ids that already have a generated episode in this project."""
+        rows = await self._session.scalars(
+            select(GeneratedEpisode.theme_id).where(GeneratedEpisode.project_id == project_id)
+        )
+        return set(rows.all())
+
+    async def list_for_project(self, project_id: uuid.UUID) -> list[GeneratedEpisode]:
+        """Return every episode generated under one project, oldest first."""
+        rows = await self._session.scalars(
+            select(GeneratedEpisode)
+            .where(GeneratedEpisode.project_id == project_id)
+            .order_by(GeneratedEpisode.created_at.asc())
+        )
+        return list(rows.all())
+
     async def delete(self, episode_id: uuid.UUID) -> bool:
         """Delete one persisted episode by id; return whether a row was removed."""
         record = await self.get_by_id(episode_id)

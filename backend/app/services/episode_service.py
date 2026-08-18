@@ -79,6 +79,42 @@ class EpisodeService:
         )
         return self._to_detail(record)
 
+    async def generate_batch(self, project_id: uuid.UUID | None = None) -> dict[str, Any]:
+        """Generate every theme's episode in one call, persisting each as it's built.
+
+        With a ``project_id``, themes that project already has a generated
+        episode for are skipped rather than re-generated, so re-clicking a
+        "generate all" button stays idempotent instead of piling up duplicate
+        episodes per theme. Without a ``project_id`` (anonymous), there is no
+        owner to scope "already generated" against — a shared anonymous pool
+        would make one caller's batch silently skip themes a *different*
+        anonymous caller happened to generate earlier, so every theme is
+        generated fresh each call there, matching the existing anonymous
+        ``generate`` endpoint's stateless behavior.
+        """
+        existing_theme_ids = (
+            await self._repository.list_theme_ids_for_project(project_id)
+            if project_id is not None
+            else set()
+        )
+        created: list[dict[str, Any]] = []
+        skipped_theme_ids: list[str] = []
+        for theme in self._generator.list_themes():
+            if theme.theme_id in existing_theme_ids:
+                skipped_theme_ids.append(theme.theme_id)
+                continue
+            created.append(await self.generate(theme.theme_id, project_id=project_id))
+        return {
+            "project_id": project_id,
+            "created": created,
+            "skipped_theme_ids": skipped_theme_ids,
+        }
+
+    async def list_all_generated_episodes(self, project_id: uuid.UUID) -> list[dict[str, Any]]:
+        """Return every persisted episode's full detail for one project, oldest first."""
+        records = await self._repository.list_for_project(project_id)
+        return [self._to_detail(record) for record in records]
+
     async def list_generated_episodes(
         self, *, page: int, page_size: int, project_id: uuid.UUID | None = None
     ) -> dict[str, Any]:

@@ -57,6 +57,9 @@ The command starts frontend, backend, PostgreSQL, and Redis. The backend contain
 | `POST /episodes/generate` | Generate an episode (script, SEO, Shorts) for a theme id; optional `project_id` (requires a bearer token for that project's owner). |
 | `GET /episodes` | Newest-first, paginated episode history (`page`, `page_size` ≤ 100, optional `project_id` filter — requires a bearer token for that project's owner). |
 | `GET /episodes/{id}` | Full detail for one previously generated episode. If it's linked to a project, requires a bearer token for that project's owner (401/403); project-less episodes stay openly readable. |
+| `GET /episodes/{id}/export` | Download one episode as a YouTube-ready production ZIP (script, SEO text, Shorts plan, reference media). Same project-ownership rule as `GET /episodes/{id}`. |
+| `POST /episodes/generate-batch` | Generate every one of the 20 themes' episodes in one call; optional `project_id` (requires a bearer token for that project's owner). Themes the project already has an episode for are skipped, not re-generated, so it's safe to call again. |
+| `GET /episodes/export-batch` | Download every episode generated under one project as a single ZIP, one numbered subfolder per episode (same layout as the single-episode export). Requires `project_id` and a bearer token for that project's owner — there's no anonymous variant. |
 | `DELETE /episodes/{id}` | Delete one previously generated episode. Same project-ownership check as above applies before deletion. |
 | `POST /storyboards` | Turn a script into an unsaved storyboard (scenes, timing, statistics). |
 | `POST /storyboards/export/{format}` | Generate a storyboard and export it as portable text (`markdown`, `json`, or `yaml`). |

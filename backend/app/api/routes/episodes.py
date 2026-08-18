@@ -12,6 +12,9 @@ from app.api.dependencies import (
 )
 from app.models.user import User
 from app.schemas.episode import (
+    BatchGeneratedEpisodeItem,
+    EpisodeBatchGenerateRequest,
+    EpisodeBatchGenerateResponse,
     EpisodeGenerateRequest,
     EpisodeGenerationResponse,
     GeneratedEpisodeListResponse,
@@ -109,6 +112,80 @@ async def generate_episode(
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     return EpisodeGenerationResponse.model_validate(result)
+
+
+@router.post(
+    "/generate-batch",
+    response_model=EpisodeBatchGenerateResponse,
+    status_code=201,
+    summary="Generate every Neşeli Orman theme's episode in one call",
+)
+async def generate_episodes_batch(
+    payload: EpisodeBatchGenerateRequest,
+    current_user: User | None = Depends(get_optional_current_user),  # noqa: B008
+    project_service: ProjectService = Depends(get_project_service),  # noqa: B008
+    service: EpisodeService = Depends(get_episode_service),  # noqa: B008
+) -> EpisodeBatchGenerateResponse:
+    """Generate an episode for every theme, skipping ones the project already has.
+
+    Same visibility rule as ``POST /generate``: passing ``project_id`` requires
+    a bearer token for that project's owner. Re-clicking this is safe to
+    repeat — themes the project already has a generated episode for are
+    reported in ``skipped_theme_ids`` rather than re-generated.
+    """
+    if payload.project_id is not None:
+        await _authorize_project_access(payload.project_id, current_user, project_service)
+    result = await service.generate_batch(project_id=payload.project_id)
+    created_items = [
+        BatchGeneratedEpisodeItem(
+            id=detail["id"],
+            theme_id=detail["episode"]["theme_id"],
+            theme_label=detail["episode"]["theme_label"],
+            title=detail["episode"]["title"],
+        )
+        for detail in result["created"]
+    ]
+    return EpisodeBatchGenerateResponse(
+        project_id=result["project_id"],
+        created=created_items,
+        skipped_theme_ids=result["skipped_theme_ids"],
+    )
+
+
+@router.get(
+    "/export-batch",
+    summary="Download every generated episode in one project as one bundled production ZIP",
+)
+async def export_batch_generated_episodes(
+    project_id: uuid.UUID = Query(...),  # noqa: B008
+    current_user: User | None = Depends(get_optional_current_user),  # noqa: B008
+    project_service: ProjectService = Depends(get_project_service),  # noqa: B008
+    service: EpisodeService = Depends(get_episode_service),  # noqa: B008
+    export_service: EpisodeExportService = Depends(get_episode_export_service),  # noqa: B008
+) -> Response:
+    """Bundle every episode generated under one project into a single ZIP.
+
+    Requires a bearer token for that project's owner, same rule as ``GET
+    /episodes`` scoped by ``project_id`` — there is no anonymous variant,
+    since an unbounded "every anonymous episode ever generated" export
+    wouldn't be a meaningful or safe thing to hand out. Each episode gets its
+    own numbered subfolder, in the same layout ``GET /episodes/{id}/export``
+    produces for one episode.
+    """
+    await _authorize_project_access(project_id, current_user, project_service)
+    project = await project_service.get_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    episodes = await service.list_all_generated_episodes(project_id=project_id)
+    if not episodes:
+        raise HTTPException(status_code=404, detail="This project has no generated episodes yet.")
+    archive_bytes = export_service.build_batch(episodes)
+    filename = export_service.batch_filename_for(project.name)
+    return Response(
+        content=archive_bytes,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get(

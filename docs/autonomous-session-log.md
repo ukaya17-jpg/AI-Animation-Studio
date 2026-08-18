@@ -1041,3 +1041,155 @@ doldurmak oldu.
   tamamlandı, CI'da yeşil, main'e push edilmiş durumda.
 - Tek gerçek eksik bu turun kendisiyle ilgili değildi: günlük girişinin
   zamanında yazılmamış olmasıydı — bu girişle kapatıldı.
+
+---
+
+# Yedinci tur: A (eksik günlük girişi) / B (toplu bölüm üretimi + toplu ZIP)
+
+## Görev A: Eksik günlük girişini tamamla
+- Durum: bu tur başladığında ZATEN yapılmış ve commit edilmiş halde
+  bulundu (`d92494b`, "Günlük: Altıncı tur (Git LFS + tekil ZIP export)
+  girişini geriye dönük ekle" — tam olarak bu turun Görev A'sının
+  istediği içerik, yukarıdaki "Altıncı tur" bölümü). Oturum başında
+  `git log`/`git status` ile doğrulandı, tekrar iş yapılmadı.
+
+## [2026-08-18 13:05 UTC] Görev B: Toplu bölüm üretimi ve toplu dışa aktarma
+- Durum: tamamlandı
+- Commit: (bu girişle aynı commit'te — kod + günlük tek commit olarak
+  gitti, çünkü kod oturum başında ZATEN çalışma dizininde tam ve
+  commit'lenmemiş halde bulundu; bkz. Notlar)
+- Test sonucu: backend `test-like-ci.sh` ile **136/136** yeşil (123'ten
+  136'ya, bu görevin 13 yeni testi dahil), ruff+mypy --strict temiz;
+  frontend lint+build temiz; yeni Playwright testi
+  (`batch-episode-generation.spec.ts`) bu makinede tek başına **yeşil**
+  (8.4sn); gerçek `docker compose up --build` stack'ine karşı elle uçtan
+  uca doğrulandı (aşağıya bakın).
+- Notlar:
+  - **Oturum başlangıcı durumu**: `git status`, backend'de 6 değişmiş
+    dosya + 1 yeni test dosyası, frontend'de 3 değişmiş dosya + 1 yeni
+    component + 1 yeni e2e testi gösterdi — hepsi bu görevin (Görev B)
+    backend/frontend/test gereksinimleriyle birebir eşleşiyordu.
+    Muhtemelen önceki bir oturumun bağlamı sıkıştırılmadan (compaction)
+    önce bu işi büyük ölçüde bitirmiş ama hiç commit etmemiş/push
+    etmemiş olduğu bir durum (Sprint 2'de de aynı desen yaşanmıştı, bkz.
+    Görev 2 notları). Kodu satır satır okuyup doğruladım (aşağıdaki
+    tasarım kararları benim onayladığım/doğruladığım kararlar), sonra
+    testleri gerçekten çalıştırıp geçtiğini kanıtladım — "muhtemelen
+    doğrudur" diye commit etmedim.
+  - **"Zaten üretilmiş" tanımı** (kod zaten şöyle karar vermişti,
+    doğruladım): `project_id` verildiğinde, o proje için aynı tema
+    daha önce üretilmişse tekrar üretilmiyor (`skipped_theme_ids`'e
+    ekleniyor) — böylece "Toplu Üret" butonuna tekrar tıklamak güvenli/
+    idempotent kalıyor, tema başına yinelenen bölüm birikmiyor.
+    `project_id` VERİLMEDİĞİNDE (anonim), "zaten üretilmiş" kavramının
+    bağlanacağı bir sahip yok — paylaşılan anonim bir havuz, bir
+    çağıranın toplu isteğinin başka bir anonim çağıranın daha önce
+    ürettiği temaları sessizce atlamasına yol açardı; bu yüzden anonim
+    çağrılar her zaman 20 temanın hepsini taze üretiyor (mevcut tekil
+    `generate` uç noktasının durumsuz davranışıyla tutarlı). Bu karar
+    `test_batch_generate_anonymous_calls_are_not_deduplicated_against_each_other`
+    testiyle açıkça doğrulanıyor.
+  - **Senkron mu / arka plan görevi mi**: senkron bırakıldı. Gerekçe:
+    20 tema üretimi tamamen deterministik/şablon tabanlı (dış AI
+    sağlayıcı çağrısı yok, bkz. 9. turdaki not — Neşeli Orman modülü
+    sabit içerik bankası tabanlı), gerçek Docker stack'inde toplu
+    üretim + toplu ZIP'leme saniyeler sürdü (aşağıdaki doğrulamaya
+    bakın), 10 saniyelik eşiği hiç yaklaşmadı. Redis zaten var ama bir
+    job kuyruğu (Celery/RQ/arq) hiç kurulu değil — bunu sadece bu görev
+    için eklemek, görevin kendi "basit tutmak istersen senkron başla"
+    önerisine ve genel "aşırı mühendislik yapma" ilkesine aykırı olurdu.
+    Frontend zaten senkron bekleyişi bir yükleniyor durumuyla
+    ("20 bölüm üretiliyor (biraz sürebilir)…", buton disabled) ve
+    generous bir istemci timeout'uyla (60sn, ayrı export-batch için de)
+    karşılıyor.
+  - **Backend uçları**: `POST /episodes/generate-batch`
+    (`EpisodeService.generate_batch`) ve `GET /episodes/export-batch`
+    (`EpisodeService.list_all_generated_episodes` +
+    `EpisodeExportService.build_batch`) — ikisi de mevcut
+    `_authorize_project_access` helper'ını (401 kimliksiz, 403 yanlış
+    sahip/yok proje) hiç değiştirmeden yeniden kullanıyor, 2. ve 3.
+    turdaki sahiplik deseniyle birebir tutarlı. `export-batch`'in
+    anonim/`project_id`'siz bir varyantı YOK (route dokümantasyonunda
+    açıkça gerekçelendirilmiş: "her zaman üretilmiş her anonim bölüm"
+    gibi sınırsız bir export ne anlamlı ne güvenli olurdu) — bu bilinçli
+    bir tasarım sınırlaması, eksik değil.
+  - **ZIP yapısı**: `EpisodeExportService.build_batch`, mevcut tekil
+    `build`'i (6. turdan) `_write_episode(archive, prefix, detail)`
+    olarak faktörledi (prefix'siz çağrıldığında tekil export'la BİREBİR
+    aynı çıktıyı üretiyor — geriye dönük uyumluluk, tekil export testleri
+    değişmeden geçti), toplu çağrıda her bölüme `NN-slug/` öneki
+    veriyor (`01-...` – `20-...`, sıralı, çakışmasız).
+  - **Frontend**: `ProjectsPage`'teki eski satır içi `<li>` render'ı
+    yeni bir `ProjectCard` component'ine çıkarıldı (üretim/indirme
+    state'ini, buton disabled/loading durumlarını, hata mesajlarını
+    kendi içinde tutuyor). "🎬 Tüm Temalarla Toplu Üret" butonu her
+    zaman görünür; "📦 Tüm Bölümleri İndir (ZIP)" sadece o projede en
+    az bir bölüm varsa görünüyor (boş bir projeyi indirmeye çalışıp
+    404 almak yerine, buton baştan gösterilmiyor). `ProjectsPage`'in
+    yükleniyor durumu da küçük bir iyileştirmeyle güncellenmiş: sadece
+    İLK yükleme tüm bölümü boşaltıyor, üretim sonrası tetiklenen arka
+    plan yenilemesi mevcut listeyi (ve ProjectCard'ın kendi local
+    state'ini) yerinde bırakıyor.
+  - **Test kapsamı** (`test_episode_batch.py`, 13 test): 20 temanın
+    hepsinin üretildiğini, idempotent tekrar tıklamayı (2. çağrıda
+    created=[]/skipped=20), anonim çağrıların birbirinden bağımsız
+    olduğunu, auth/sahiplik 401/403'ü (hem generate hem export için),
+    var olmayan proje için 403'ü (kaynak sızıntısını önlemek için 404
+    değil — mevcut desenle tutarlı), boş projede export için 404'ü, ve
+    ZIP'in gerçekten 20 numaralı alt klasör + her birinde tam dosya
+    seti içerdiğini doğruluyor. Yeni Playwright testi
+    (`batch-episode-generation.spec.ts`) gerçek 20 bölümlük üretimi
+    beklemek yerine `page.route` ile backend'i mock'luyor (görevin
+    kendi talimatı: "E2E testini aşırı yavaşlatma") — sadece butonun
+    doğru isteği tetiklediğini, yükleniyor durumunun göründüğünü, ve
+    üretim bitince indirme butonunun ortaya çıktığını doğruluyor.
+  - **Gerçek Docker doğrulaması** (`docker compose up --build`, sıfırdan):
+    Yeni bir kullanıcı/proje oluşturup `POST /episodes/generate-batch`
+    çağrıldı → **20 created, 0 skipped**. `GET /episodes/export-batch`
+    → HTTP 200, `content-type: application/zip`,
+    `content-disposition` dosya adı `...-tum-bolumler-paketi.zip`.
+    İndirilen ZIP'i (387.901.636 bayt — 20 bölümün her biri kendi
+    karakter/mekan görselleri+ses örnekleri+mekan videosunu taşıdığı
+    için büyük, medya tekilleştirilmiyor, bilinçli/basit bir tasarım)
+    Python'un `zipfile` modülüyle açıp doğruladım: **tam olarak 20 üst
+    seviye klasör** (`01-neseli-orman-paylasma` … `20-...`), her
+    birinde tekil export'la aynı 6 dosya + 3 medya alt klasörü
+    (`gorseller/`, `sesler/`, `mekan_videosu/`) eksiksiz mevcut.
+  - **Playwright doğrulaması**: Yeni `batch-episode-generation.spec.ts`
+    testi, gerçek Docker frontend/backend stack'ine karşı tek başına
+    çalıştırıldı — **1/1 yeşil, 8.4 saniye**. Tam Playwright suite'ini
+    (tüm mevcut testler + bu yeni test) aynı anda çalıştırmayı denedim,
+    ama bu makine yine düşük RAM'de (`free -h` → ~290Mi boş, 3. ve 5.
+    turlarda belgelenen aynı paylaşımlı-sandbox sınırlaması) 180
+    saniyede tamamlanmadı/kesildi. 3. turda kurulan ilkeye uyarak
+    ("asıl doğrulama her zaman GitHub Actions'ta yapılmalı") tam
+    suite'in regresyon doğrulamasını CI'ın kendi özel runner'ına
+    bıraktım — bu yeni testin İZOLE çalıştığını zaten kanıtladım, o
+    yeterliydi.
+  - Kapsam dışı bırakılan/bilinçli sınırlamalar: medya dosyaları toplu
+    ZIP'te tekilleştirilmiyor (her bölüm klasörü kendi kopyasını taşıyor
+    — 4 mekan/5 karakter tekrar tekrar aynı dosyaları içeriyor, ZIP
+    ~388 MB'a çıkıyor). Bunu tekilleştirmek (ör. paylaşılan bir
+    `ortak-medya/` klasörü + her bölüm klasöründen sembolik/göreli
+    referans) gerçek bir kazanç olurdu ama ZIP formatında sembolik link
+    taşımak platformlar arası güvenilir değil ve görev metni bunu
+    istemiyordu — bir sonraki tur için not.
+
+## YEDİNCİ TUR TAMAMLANDI
+- A: zaten tamamlanmıştı (önceki oturumda commit edilmiş halde
+  bulundu, bu turda sadece doğrulandı). B: bu turda uygulanan koddan
+  (önceki oturumdan kalma, commit edilmemiş) doğrulanıp tamamlandı.
+- Backend testleri: 123 (oturum başı) → 136 (oturum sonu). Tüm testler,
+  ruff, mypy --strict, frontend lint+build, ve yeni Playwright testi
+  (izole) commit'ten önce yeşildi. Gerçek Docker stack'inde 20 bölümlük
+  toplu üretim + 388 MB'lık toplu ZIP export elle uçtan uca doğrulandı.
+- Kullanıcının gözden geçirmesi gereken yeni nokta:
+  1. Toplu ZIP export medya dosyalarını tekilleştirmiyor — 20 bölüm
+     sadece 4 mekan + 5 karakteri paylaştığı için ZIP boyutu (~388 MB)
+     gerçek benzersiz medyadan çok daha büyük. Fonksiyonel bir sorun
+     değil (her klasör kendi başına eksiksiz/taşınabilir) ama bant
+     genişliği/depolama açısından bir sonraki iyileştirme adayı.
+  2. Önceki turların tüm notları (auth kapsamı minimal, elle yazılan
+     migration'lar, `.env` yerel tuzağı çözüldü, tam Playwright suite'i
+     bu sandbox'ta güvenilir değil — asıl doğrulama CI'da yapılmalı)
+     hâlâ geçerli.

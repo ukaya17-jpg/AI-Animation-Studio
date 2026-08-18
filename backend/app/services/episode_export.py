@@ -87,36 +87,63 @@ class EpisodeExportService:
         returns (``episode``/``seo``/``shorts`` keys), so the export always
         reflects exactly what the API already serves for that episode.
         """
-        episode = detail["episode"]
-        seo = detail["seo"]
-        shorts = detail["shorts"]
-
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
-            archive.writestr("senaryo.md", self._script_markdown(episode))
-            archive.writestr("youtube_baslik_secenekleri.txt", "\n".join(seo["titles"]))
-            archive.writestr("youtube_aciklama.txt", seo["description"])
-            archive.writestr("youtube_etiketler.txt", ", ".join(seo["tags"]))
-            archive.writestr("shorts_plani.md", self._shorts_markdown(shorts))
-            archive.writestr("README.txt", _README_TEXT)
+            self._write_episode(archive, "", detail)
+        return buffer.getvalue()
 
-            lead = episode["lead_character"]
-            support = episode["support_character"]
-            location = episode["location"]
-            self._add_static_file(archive, "gorseller", lead["image_url"])
-            self._add_static_file(archive, "gorseller", support["image_url"])
-            self._add_static_file(archive, "gorseller", location["image_url"])
-            self._add_static_file(archive, "sesler", lead["voice_sample_url"])
-            self._add_static_file(archive, "sesler", support["voice_sample_url"])
-            self._add_static_file(archive, "mekan_videosu", location["ambient_video_url"])
+    def build_batch(self, episodes: list[dict[str, Any]]) -> bytes:
+        """Return one ZIP bundling every given episode's production package.
 
+        Each episode gets its own numbered subfolder containing exactly the
+        same file layout ``build`` produces for one episode, so a creator can
+        also pull a single episode's folder out of the bundle and use it
+        standalone.
+        """
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+            for index, detail in enumerate(episodes, start=1):
+                folder = f"{index:02d}-{self._slug(detail['episode']['title'])}"
+                self._write_episode(archive, f"{folder}/", detail)
         return buffer.getvalue()
 
     def filename_for(self, title: str) -> str:
         """Return a safe, ASCII .zip filename derived from an episode title."""
+        return f"{self._slug(title)}-produksiyon-paketi.zip"
+
+    def batch_filename_for(self, project_name: str) -> str:
+        """Return a safe, ASCII .zip filename derived from a project name."""
+        return f"{self._slug(project_name)}-tum-bolumler-paketi.zip"
+
+    def _write_episode(self, archive: zipfile.ZipFile, prefix: str, detail: dict[str, Any]) -> None:
+        """Write one episode's production package files, under an optional folder ``prefix``."""
+        episode = detail["episode"]
+        seo = detail["seo"]
+        shorts = detail["shorts"]
+
+        archive.writestr(f"{prefix}senaryo.md", self._script_markdown(episode))
+        archive.writestr(f"{prefix}youtube_baslik_secenekleri.txt", "\n".join(seo["titles"]))
+        archive.writestr(f"{prefix}youtube_aciklama.txt", seo["description"])
+        archive.writestr(f"{prefix}youtube_etiketler.txt", ", ".join(seo["tags"]))
+        archive.writestr(f"{prefix}shorts_plani.md", self._shorts_markdown(shorts))
+        archive.writestr(f"{prefix}README.txt", _README_TEXT)
+
+        lead = episode["lead_character"]
+        support = episode["support_character"]
+        location = episode["location"]
+        self._add_static_file(archive, f"{prefix}gorseller", lead["image_url"])
+        self._add_static_file(archive, f"{prefix}gorseller", support["image_url"])
+        self._add_static_file(archive, f"{prefix}gorseller", location["image_url"])
+        self._add_static_file(archive, f"{prefix}sesler", lead["voice_sample_url"])
+        self._add_static_file(archive, f"{prefix}sesler", support["voice_sample_url"])
+        self._add_static_file(archive, f"{prefix}mekan_videosu", location["ambient_video_url"])
+
+    @staticmethod
+    def _slug(title: str) -> str:
+        """Return a safe, ASCII, lowercase-hyphenated slug derived from any title."""
         ascii_title = title.translate(_TURKISH_ASCII_MAP)
         slug = re.sub(r"[^a-zA-Z0-9]+", "-", ascii_title).strip("-").lower()
-        return f"{slug or 'bolum'}-produksiyon-paketi.zip"
+        return slug or "bolum"
 
     @staticmethod
     def _script_markdown(episode: dict[str, Any]) -> str:
