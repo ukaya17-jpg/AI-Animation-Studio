@@ -1193,3 +1193,81 @@ doldurmak oldu.
      migration'lar, `.env` yerel tuzağı çözüldü, tam Playwright suite'i
      bu sandbox'ta güvenilir değil — asıl doğrulama CI'da yapılmalı)
      hâlâ geçerli.
+
+# Sekizinci tur: İçerik kütüphanesini genişlet (3 yeni karakter, 2 yeni mekan, 8 yeni tema)
+
+## [2026-08-18 15:02 UTC] Görev: kadroyu 8 karaktere, mekanları 6'ya, temaları 28'e çıkar
+- Durum: tamamlandı
+- Commit: `c42a540` Görev C: kadroyu 8 karaktere, mekanları 6'ya genişlet
+  (28 tema) — ardından `origin/main`'e push edildi
+- Test sonucu: backend `scripts/test-like-ci.sh` ile **145/145** yeşil
+  (1 skip; 136'dan 145'e, bu turun 9 yeni testi dahil), ruff+mypy
+  --strict temiz; frontend lint+build temiz; `batch-episode-generation.spec.ts`
+  bu makinede tek başına yeşil; gerçek `docker compose up --build`
+  stack'ine karşı elle uçtan uca doğrulandı (aşağıya bakın).
+- Notlar:
+  - **Oturum başlangıcı durumu**: tıpkı altıncı/yedinci turlarda olduğu
+    gibi, bu görevin tüm kodu (`content_bank.py`'ye 3 karakter + 2 mekan
+    + 8 tema, ilgili 4 test dosyası, README, `ses-rehberi.md`, yeni
+    `docs/karakter-ve-mekan-incili.md`) ve 10 yeni statik medya dosyası
+    (3 karakter görseli+sesi, 2 mekan görseli+ambiyans videosu) oturum
+    başında çalışma dizininde tam ve commit'lenmemiş halde bulundu.
+    "Muhtemelen doğrudur" diye commit etmek yerine önce doğruladım:
+    - Statik dosyaların placeholder değil gerçek medya olduğunu
+      magic-byte kontrolüyle kanıtladım (PNG imzası `89 50 4E 47`, MP3
+      ID3 etiketi, MP4 `ftypisom` kutusu) — hepsi görev metninde verilen
+      Artlist CDN URL'lerinden daha önce doğru indirilmiş.
+    - `generate-batch`/`export-batch` route'larında ve frontend
+      `ThemePicker`'da eski "20 tema" varsayımının hardcode edilip
+      edilmediğini grep ile taradım — yok, ikisi de content bank'teki
+      tema sayısına dinamik (tek "20" isabeti alakasız bir
+      `page_size` varsayılanıydı).
+  - **Gerçek Docker doğrulaması**: `docker compose up --build backend
+    frontend` ile imajları yeni koddan yeniden derleyip container'ları
+    yeniden başlattım (postgres/redis zaten sağlıklıydı, dokunulmadı).
+    `GET /episodes/themes` → **28 tema**. Yeni bir kullanıcı/proje ile
+    `POST /episodes/generate-batch` → **28 created, 0 skipped**.
+    `GET /episodes/export-batch` → HTTP 200, 604.986.459 bayt ZIP.
+    ZIP'i Python `zipfile` ile açıp doğruladım: tam **28 üst seviye
+    klasör** (`01-...` … `28-...`), 21-28 numaralı klasörler bu turun
+    yeni temaları. 21 numaralı klasörü (`yaratici-dusunme`: Kurnaz +
+    Papatya + Gizli Mağara) elle inceleyip `kurnaz.png`/`kurnaz.mp3`/
+    `gizli_magara.png`/`gizli_magara.mp4` dosyalarının statik
+    dosyalarla birebir aynı boyutta ve doğru alt klasörlerde
+    (`gorseller/`, `sesler/`, `mekan_videosu/`) mevcut olduğunu, ve
+    `senaryo.md`/`youtube_etiketler.txt` içeriğinin doğru
+    karakter/mekan/catchphrase'leri yansıttığını doğruladım.
+  - **Playwright doğrulaması**: `batch-episode-generation.spec.ts`,
+    gerçek Docker stack'ine karşı izole çalıştırıldı — 1/1 yeşil. Üçüncü
+    turda kurulan ilkeye uyarak (bu sandbox düşük RAM'de tam suite'i
+    güvenilir çalıştıramıyor — bkz. önceki turların notları) tam suite
+    regresyon doğrulamasını CI'a bıraktım.
+  - Doğrulama için oluşturulan test kullanıcısı/projesi ve indirilen
+    ZIP, doğrulama bitince temizlendi (yerel scratch dosyaları
+    silindi; test kullanıcısı/projesi dev DB'sinde bırakıldı, prod
+    değil).
+  - Yeni 8 tema için YouTube SEO anahtar kelimeleri, `content_bank`'te
+    ayrı bir statik alan olarak tutulmuyor (tasarım gereği — etiketler
+    `EpisodeSeoService` tarafından otomatik türetiliyor); görev
+    metninin istediği elle-seçilmiş ek öneriler zaten
+    `docs/karakter-ve-mekan-incili.md`'nin son bölümünde önceki
+    oturumdan kalma haliyle mevcuttu, aynen korundu.
+
+## SEKİZİNCİ TUR TAMAMLANDI
+- Kod, statik varlıklar ve dokümantasyon önceki bir oturumda hazırlanmış
+  commit'lenmemiş halde bulundu; bu turda satır satır doğrulanıp
+  commit'lendi ve `origin/main`'e push edildi.
+- Backend testleri: 136 (önceki tur sonu) → 145 (bu tur sonu). Tüm
+  testler, ruff, mypy --strict, frontend lint+build yeşildi. Gerçek
+  Docker stack'inde 28 temanın tamamı için toplu üretim + toplu ZIP
+  export (605 MB) uçtan uca doğrulandı.
+- Kullanıcının gözden geçirmesi gereken nokta:
+  1. Toplu ZIP export hâlâ medya dosyalarını tekilleştirmiyor (altıncı/
+     yedinci turdan beri bilinen, bilinçli bir sınırlama) — artık 28
+     bölüm 8 karakter + 6 mekan paylaştığı için ZIP boyutu 388 MB'dan
+     605 MB'a çıktı. Fonksiyonel bir sorun değil, ama tekilleştirme
+     bir sonraki iyileştirme adayı olarak duruyor.
+  2. Önceki turların tüm notları (auth kapsamı minimal, elle yazılan
+     migration'lar, `.env` yerel tuzağı çözüldü, tam Playwright suite'i
+     bu sandbox'ta güvenilir değil — asıl doğrulama CI'da yapılmalı)
+     hâlâ geçerli.
