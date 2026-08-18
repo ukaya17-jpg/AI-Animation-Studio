@@ -13,12 +13,12 @@ test('clicking batch-generate on a project shows a loading state, then a downloa
   const projectName = `E2E Batch Project ${suffix}`
 
   // Both the batch-generate call and the episode list re-fetch it triggers are
-  // intercepted, rather than left to hit the real backend. Generating all 20
+  // intercepted, rather than left to hit the real backend. Generating all 28
   // themes for real is fast in this app (pure templating, no external calls —
   // see episode_service.py), but this test only needs to prove the button
   // wires up to the right request, renders a loading state, and reveals the
   // download button once episodes exist — not that backend generation speed
-  // stays fast forever, which is what a real 20-episode wait would end up
+  // stays fast forever, which is what a real 28-episode wait would end up
   // pinning down.
   let batchGenerated = false
   let batchRequestBody: unknown = null
@@ -43,7 +43,7 @@ test('clicking batch-generate on a project shows a loading state, then a downloa
             title: 'Neşeli Orman: Paylaşma',
           },
         ],
-        skipped_theme_ids: Array.from({ length: 19 }, (_, i) => `tema-${i}`),
+        skipped_theme_ids: Array.from({ length: 27 }, (_, i) => `tema-${i}`),
       }),
     })
   })
@@ -110,7 +110,7 @@ test('clicking batch-generate on a project shows a loading state, then a downloa
   const generateButton = projectCard.getByRole('button').first()
   await expect(generateButton).toHaveText('🎬 Tüm Temalarla Toplu Üret')
   await generateButton.click()
-  await expect(page.getByText('20 bölüm üretiliyor (biraz sürebilir)…')).toBeVisible()
+  await expect(page.getByText('Tüm bölümler üretiliyor (biraz sürebilir)…')).toBeVisible()
   await expect(generateButton).toBeDisabled()
 
   await expect(projectCard.getByText(/1 yeni bölüm üretildi/)).toBeVisible()

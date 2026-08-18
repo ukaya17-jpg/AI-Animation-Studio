@@ -40,9 +40,9 @@ export async function fetchGeneratedEpisode(id: string): Promise<EpisodeGenerati
   return response.data
 }
 
-/** Generating 20 episodes and zipping 20 episodes' media both stay well under the
- * default 10s client timeout in practice, but a generous override keeps a slow
- * connection from tripping it on the largest batch (see episode_export.py). */
+/** Generating every theme's episode and zipping all of their media both stay well
+ * under the default 10s client timeout in practice, but a generous override keeps
+ * a slow connection from tripping it on the largest batch (see episode_export.py). */
 const _BATCH_TIMEOUT_MS = 60_000
 
 export async function generateEpisodesBatch(

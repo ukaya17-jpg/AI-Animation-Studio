@@ -3,6 +3,8 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 
 from app.api.dependencies import (
     get_episode_export_service,
@@ -179,12 +181,13 @@ async def export_batch_generated_episodes(
     episodes = await service.list_all_generated_episodes(project_id=project_id)
     if not episodes:
         raise HTTPException(status_code=404, detail="This project has no generated episodes yet.")
-    archive_bytes = export_service.build_batch(episodes)
+    archive_path = export_service.build_batch(episodes)
     filename = export_service.batch_filename_for(project.name)
-    return Response(
-        content=archive_bytes,
+    return FileResponse(
+        archive_path,
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        background=BackgroundTask(archive_path.unlink),
     )
 
 

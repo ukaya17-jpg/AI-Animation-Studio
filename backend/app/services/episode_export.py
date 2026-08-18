@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import io
 import re
+import tempfile
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -92,20 +93,31 @@ class EpisodeExportService:
             self._write_episode(archive, "", detail)
         return buffer.getvalue()
 
-    def build_batch(self, episodes: list[dict[str, Any]]) -> bytes:
-        """Return one ZIP bundling every given episode's production package.
+    def build_batch(self, episodes: list[dict[str, Any]]) -> Path:
+        """Write one ZIP bundling every given episode's production package to a temp file.
 
         Each episode gets its own numbered subfolder containing exactly the
         same file layout ``build`` produces for one episode, so a creator can
         also pull a single episode's folder out of the bundle and use it
         standalone.
+
+        Written straight to disk (returning a path, not ``bytes``) rather
+        than assembled in an in-memory buffer: every folder duplicates its
+        episode's character/location media by design (see above), so a
+        full-catalog batch carries hundreds of MB of largely-incompressible
+        image/audio/video data — building that as one in-process object was
+        enough to exceed container memory and crash the whole server. The
+        caller is responsible for deleting the returned file once it's been
+        streamed back (e.g. via a ``BackgroundTask``).
         """
-        buffer = io.BytesIO()
-        with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
-            for index, detail in enumerate(episodes, start=1):
-                folder = f"{index:02d}-{self._slug(detail['episode']['title'])}"
-                self._write_episode(archive, f"{folder}/", detail)
-        return buffer.getvalue()
+        descriptor, raw_path = tempfile.mkstemp(suffix=".zip")
+        path = Path(raw_path)
+        with open(descriptor, "wb") as file_obj:
+            with zipfile.ZipFile(file_obj, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+                for index, detail in enumerate(episodes, start=1):
+                    folder = f"{index:02d}-{self._slug(detail['episode']['title'])}"
+                    self._write_episode(archive, f"{folder}/", detail)
+        return path
 
     def filename_for(self, title: str) -> str:
         """Return a safe, ASCII .zip filename derived from an episode title."""

@@ -43,7 +43,7 @@ export function EpisodeStudioPage() {
     setHistoryLoading(true)
     setHistoryError(null)
     try {
-      const data = await fetchGeneratedEpisodes()
+      const data = await fetchGeneratedEpisodes(1, 100)
       setHistory(data.items)
     } catch {
       setHistoryError('Geçmiş bölümler yüklenirken bir hata oluştu.')

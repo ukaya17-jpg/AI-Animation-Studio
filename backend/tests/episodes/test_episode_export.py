@@ -70,6 +70,30 @@ async def test_export_endpoint_returns_a_zip_with_the_full_production_package(
         assert tag in tags_line
 
 
+async def test_export_endpoint_bundles_a_new_character_and_location_correctly(
+    client: httpx.AsyncClient,
+) -> None:
+    """The Görev-B content expansion added Kurnaz/Gizli Mağara; make sure their real
+    downloaded image/voice/video files actually land in the export ZIP, not just the
+    theme metadata (``_add_static_file`` silently skips a file that isn't on disk)."""
+    generated = await client.post("/episodes/generate", json={"theme_id": "yaratici_dusunme"})
+    episode_id = generated.json()["id"]
+
+    response = await client.get(f"/episodes/{episode_id}/export")
+
+    assert response.status_code == 200
+    archive = zipfile.ZipFile(io.BytesIO(response.content))
+    names = archive.namelist()
+
+    assert "gorseller/kurnaz.png" in names
+    assert "sesler/kurnaz.mp3" in names
+    assert "gorseller/gizli_magara.png" in names
+    assert "mekan_videosu/gizli_magara.mp4" in names
+
+    tags_line = archive.read("youtube_etiketler.txt").decode("utf-8")
+    assert "kurnaz neşeli orman" in tags_line
+
+
 async def test_export_endpoint_returns_404_for_an_unknown_id(client: httpx.AsyncClient) -> None:
     response = await client.get(f"/episodes/{uuid.uuid4()}/export")
 

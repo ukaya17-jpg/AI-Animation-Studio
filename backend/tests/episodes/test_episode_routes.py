@@ -20,12 +20,14 @@ async def _create_project(client: httpx.AsyncClient, email: str) -> tuple[str, d
     return project_id, headers
 
 
-async def test_list_themes_endpoint_returns_all_twenty_themes(client: httpx.AsyncClient) -> None:
+async def test_list_themes_endpoint_returns_all_twenty_eight_themes(
+    client: httpx.AsyncClient,
+) -> None:
     response = await client.get("/episodes/themes")
 
     assert response.status_code == 200
     body = response.json()
-    assert len(body) == 20
+    assert len(body) == 28
     paylasma = next(item for item in body if item["theme_id"] == "paylasma")
     assert paylasma["label"] == "Paylaşma"
     assert paylasma["lead_character_name"]
@@ -42,6 +44,40 @@ async def test_list_themes_endpoint_returns_all_twenty_themes(client: httpx.Asyn
         paylasma["location_ambient_video_url"]
         == "/static/locations/videos/paylasim_bahcesi.mp4"
     )
+
+
+async def test_list_themes_endpoint_includes_the_new_cast_and_locations(
+    client: httpx.AsyncClient,
+) -> None:
+    response = await client.get("/episodes/themes")
+
+    assert response.status_code == 200
+    body = response.json()
+    yaratici_dusunme = next(item for item in body if item["theme_id"] == "yaratici_dusunme")
+    assert yaratici_dusunme["label"] == "Yaratıcı Düşünme"
+    assert yaratici_dusunme["lead_character_name"] == "Kurnaz"
+    assert yaratici_dusunme["lead_character_image_url"] == "/static/characters/kurnaz.png"
+    assert (
+        yaratici_dusunme["lead_character_voice_sample_url"]
+        == "/static/characters/voices/kurnaz.mp3"
+    )
+    assert yaratici_dusunme["location_name"] == "Gizli Mağara"
+    assert yaratici_dusunme["location_image_url"] == "/static/locations/gizli_magara.png"
+    assert (
+        yaratici_dusunme["location_ambient_video_url"]
+        == "/static/locations/videos/gizli_magara.mp4"
+    )
+
+    kendini_kabul = next(item for item in body if item["theme_id"] == "kendini_kabul")
+    assert kendini_kabul["lead_character_name"] == "Diken"
+    assert kendini_kabul["lead_character_image_url"] == "/static/characters/diken.png"
+    assert kendini_kabul["location_name"] == "Renkli Çayır"
+    assert kendini_kabul["location_image_url"] == "/static/locations/renkli_cayir.png"
+
+    umut = next(item for item in body if item["theme_id"] == "umut")
+    assert umut["lead_character_name"] == "Işık"
+    assert umut["lead_character_image_url"] == "/static/characters/isik.png"
+    assert umut["lead_character_voice_sample_url"] == "/static/characters/voices/isik.mp3"
 
 
 async def test_generate_episode_endpoint_returns_episode_seo_and_shorts(

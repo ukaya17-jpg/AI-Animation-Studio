@@ -80,7 +80,7 @@ export function ProjectCard({ project, episodes, onEpisodesChanged }: ProjectCar
             disabled={generating}
             className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {generating ? '20 bölüm üretiliyor (biraz sürebilir)…' : '🎬 Tüm Temalarla Toplu Üret'}
+            {generating ? 'Tüm bölümler üretiliyor (biraz sürebilir)…' : '🎬 Tüm Temalarla Toplu Üret'}
           </button>
           {episodes.length > 0 && (
             <button

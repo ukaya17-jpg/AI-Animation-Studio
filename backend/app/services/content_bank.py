@@ -111,6 +111,66 @@ _CHARACTERS: tuple[EpisodeCharacter, ...] = (
         image_url="/static/characters/papatya.png",
         voice_sample_url="/static/characters/voices/papatya.mp3",
     ),
+    EpisodeCharacter(
+        character_id="kurnaz",
+        name="Kurnaz",
+        species="Tilki",
+        role="Zeki Problem Çözücü",
+        core_value="Yaratıcı Düşünme",
+        personality=("zeki", "kurnaz ama iyi kalpli", "kendinden emin", "meraklı"),
+        visual_description=(
+            "Turuncu-kızıl tüylü, beyaz göğüs lekeli, kabarık kuyruklu bir tilki. "
+            "Boynunda mavi bir fular, elinde küçük bir büyüteç taşır."
+        ),
+        voice=VoiceProfile(
+            pitch="orta-kalın, esprili",
+            pace="hızlı ve zekice",
+            tone="kendinden emin, esprili",
+            catchphrase="Bir problem mi var? Hemen bir çözüm bulabilirim!",
+        ),
+        image_url="/static/characters/kurnaz.png",
+        voice_sample_url="/static/characters/voices/kurnaz.mp3",
+    ),
+    EpisodeCharacter(
+        character_id="diken",
+        name="Diken",
+        species="Kirpi",
+        role="Çekingen ama Sevimli",
+        core_value="Kendini Kabul Etme",
+        personality=("utangaç", "duyarlı", "içten", "kendini geliştiren"),
+        visual_description=(
+            "Yuvarlak, dikenli ama sevimli görünen küçük bir kirpi. Boynunda "
+            "turuncu-sarı çizgili bir atkı vardır."
+        ),
+        voice=VoiceProfile(
+            pitch="yumuşak, orta-tiz",
+            pace="yavaş, tereddütlü",
+            tone="nazik, biraz çekingen ama sıcak",
+            catchphrase="Ben... çok da farklı değilim aslında.",
+        ),
+        image_url="/static/characters/diken.png",
+        voice_sample_url="/static/characters/voices/diken.mp3",
+    ),
+    EpisodeCharacter(
+        character_id="isik",
+        name="Işık",
+        species="Ateşböceği",
+        role="Umut Veren Rehber",
+        core_value="Umut",
+        personality=("umutlu", "sakin", "yol gösterici", "nazik"),
+        visual_description=(
+            "Küçük, yuvarlak, saydam kanatlı bir ateşböceği. Kuyruğunda sıcak "
+            "sarı-altın bir parıltı vardır."
+        ),
+        voice=VoiceProfile(
+            pitch="yumuşak, orta",
+            pace="sakin, huzurlu",
+            tone="umut verici, rahatlatıcı",
+            catchphrase="Karanlık bazen korkutucu görünür ama merak etme, ben yolunu aydınlatırım.",
+        ),
+        image_url="/static/characters/isik.png",
+        voice_sample_url="/static/characters/voices/isik.mp3",
+    ),
 )
 
 _LOCATIONS: tuple[EpisodeLocation, ...] = (
@@ -153,6 +213,28 @@ _LOCATIONS: tuple[EpisodeLocation, ...] = (
         ),
         image_url="/static/locations/yildiz_tepesi.png",
         ambient_video_url="/static/locations/videos/yildiz_tepesi.mp4",
+    ),
+    EpisodeLocation(
+        location_id="gizli_magara",
+        name="Gizli Mağara",
+        type="Keşif / Gizem Alanı",
+        description=(
+            "Duvarlarında parıldayan kristallerin olduğu, sıcak ve büyülü ışıkla "
+            "aydınlanan, korkutucu olmayan küçük bir mağara."
+        ),
+        image_url="/static/locations/gizli_magara.png",
+        ambient_video_url="/static/locations/videos/gizli_magara.mp4",
+    ),
+    EpisodeLocation(
+        location_id="renkli_cayir",
+        name="Renkli Çayır",
+        type="Sanat / Yaratıcılık Alanı",
+        description=(
+            "Her renkten kır çiçeğinin açtığı, kelebeklerin uçuştuğu, canlı ve "
+            "ilham verici bir çayır."
+        ),
+        image_url="/static/locations/renkli_cayir.png",
+        ambient_video_url="/static/locations/videos/renkli_cayir.mp4",
     ),
 )
 
@@ -363,6 +445,94 @@ _THEMES: tuple[EpisodeTheme, ...] = (
         lesson=(
             "Herkesin farklı olması ormanı daha da renkli ve güzel yapar; "
             "farklılıklarımızla birbirimizi tamamlarız."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="yaratici_dusunme",
+        label="Yaratıcı Düşünme",
+        lead_character_id="kurnaz",
+        support_character_id="papatya",
+        location_id="gizli_magara",
+        lesson=(
+            "Bir sorunun tek bir çözümü yoktur; farklı düşünmek bazen en iyi "
+            "yolu bulmamızı sağlar."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="kendini_kabul",
+        label="Kendini Kabul Etme",
+        lead_character_id="diken",
+        support_character_id="minik",
+        location_id="renkli_cayir",
+        lesson=(
+            "Farklı olmak eksiklik değildir; kendimiz olduğumuzda en güzel "
+            "haldeyizdir."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="umut",
+        label="Umut",
+        lead_character_id="isik",
+        support_character_id="boncuk",
+        location_id="yildiz_tepesi",
+        lesson=(
+            "En karanlık anlarda bile küçük bir umut ışığı, yolumuzu bulmamıza "
+            "yeter."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="degisime_uyum",
+        label="Değişime Uyum Sağlama",
+        lead_character_id="kurnaz",
+        support_character_id="zeytin",
+        location_id="gokkusagi_nehri",
+        lesson=(
+            "Değişim korkutucu görünebilir ama her yeni durum, yeni bir şey "
+            "öğrenmek için bir fırsattır."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="sanatsal_ifade",
+        label="Sanatsal İfade",
+        lead_character_id="papatya",
+        support_character_id="diken",
+        location_id="renkli_cayir",
+        lesson=(
+            "Kendimizi anlatmanın bir sürü yolu vardır; resim, şarkı, dans... "
+            "hepsi güzeldir."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="korkuyla_basetme",
+        label="Korkuyla Baş Etme",
+        lead_character_id="diken",
+        support_character_id="minik",
+        location_id="gizli_magara",
+        lesson=(
+            "Korkmak normaldir; önemli olan korkuyla birlikte küçük bir adım "
+            "atabilmektir."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="liderlik",
+        label="Liderlik ve Sorumluluk Alma",
+        lead_character_id="kurnaz",
+        support_character_id="boncuk",
+        location_id="buyuk_mese",
+        lesson=(
+            "Lider olmak en çok konuşan değil, herkesi dinleyip doğru kararı "
+            "bulan kişidir."
+        ),
+    ),
+    EpisodeTheme(
+        theme_id="dostluk_cesitliligi",
+        label="Farklı Arkadaşlıklar Kurmak",
+        lead_character_id="isik",
+        support_character_id="findik",
+        location_id="gokkusagi_nehri",
+        lesson=(
+            "Bazen en güzel dostluklar, hiç beklemediğimiz, bize hiç "
+            "benzemeyen biriyle kurulur."
         ),
     ),
 )

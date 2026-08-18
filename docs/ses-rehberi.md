@@ -18,6 +18,9 @@ sesinin hangi karaktere karşılık geldiğini bulmak için referans niteliğind
 | Minik | `voices/minik.mp3` | Cupcake | 87 | FEMALE, CHILD |
 | Boncuk | `voices/boncuk.mp3` | Gravity | 113130 | MALE, MIDDLE_AGED |
 | Papatya | `voices/papatya.mp3` | Bright | 32 | FEMALE, YOUNG_ADULT |
+| Kurnaz | `voices/kurnaz.mp3` | Wit | 25 | MALE, MIDDLE_AGED |
+| Diken | `voices/diken.mp3` | Mild | 43 | MALE, YOUNG_ADULT |
+| Işık | `voices/isik.mp3` | Serenity | 29 | FEMALE, ADULT |
 
 - **Sağlayıcı (provider):** `artlist`
 - **Model:** Eleven v3 (metinden-konuşmaya, Türkçe)
@@ -25,7 +28,10 @@ sesinin hangi karaktere karşılık geldiğini bulmak için referans niteliğind
 Ses seçimleri, her karakterin `content_bank.py`'deki `VoiceProfile` alanındaki
 (`pitch`/`pace`/`tone`/`catchphrase`) betimsel ses notlarıyla eşleşecek şekilde
 yapıldı — örneğin Zeytin'in "sakin, öğretmen edası" tonu Mentor sesiyle,
-Fındık'ın "tiz-ince, hızlı, çocuksu" tonu Curiosity sesiyle örtüşüyor.
+Fındık'ın "tiz-ince, hızlı, çocuksu" tonu Curiosity sesiyle örtüşüyor. Aynı
+mantıkla: Kurnaz'ın "orta-kalın, esprili, kendinden emin" tonu Wit sesiyle,
+Diken'in "yumuşak, tereddütlü, çekingen ama sıcak" tonu Mild sesiyle, Işık'ın
+"yumuşak, sakin, umut verici" tonu ise Serenity sesiyle örtüşüyor.
 
 ## API'de nerede kullanılıyor
 
