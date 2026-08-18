@@ -1,0 +1,11 @@
+# Large binary reference assets (character/location art, voice samples, and
+# ambient videos) are stored via Git LFS instead of directly in git history,
+# so a clone doesn't have to pull every media file's full bytes just to
+# check out the source tree. Scoped to backend/app/static so unrelated future
+# binaries elsewhere in the repo aren't silently redirected through LFS too.
+#
+# Only newly added/changed files matching these patterns go through LFS from
+# here on — existing history was intentionally left as-is (no rewrite).
+backend/app/static/**/*.mp4 filter=lfs diff=lfs merge=lfs -text
+backend/app/static/**/*.png filter=lfs diff=lfs merge=lfs -text
+backend/app/static/**/*.mp3 filter=lfs diff=lfs merge=lfs -text

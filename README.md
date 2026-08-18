@@ -19,9 +19,13 @@ AI Animation Studio is a scalable foundation for creating, managing, and deliver
 
 ## Installation
 
-Prerequisites: Python 3.12+, Node.js 20+, and Docker Desktop (recommended).
+Prerequisites: Python 3.12+, Node.js 20+, Docker Desktop (recommended), and [Git LFS](https://git-lfs.com).
+
+This repo uses Git LFS for large binary reference assets under `backend/app/static/` (character/location art, voice samples, ambient location videos — see `.gitattributes`). Run `git lfs install` once per machine before cloning, so those files are pulled as real content instead of pointer stubs:
 
 ```bash
+git lfs install
+git clone <repo-url>
 cp .env.example .env
 cd backend && python -m venv .venv && .venv/bin/pip install -e '.[dev]'
 cd ../frontend && npm install
