@@ -1,4 +1,6 @@
+import type { KeyboardEvent } from 'react'
 import type { GeneratedEpisodeSummary } from '../../types/episode'
+import { ExportButton } from './ExportButton'
 
 type EpisodeHistoryListProps = {
   episodes: GeneratedEpisodeSummary[]
@@ -29,13 +31,26 @@ export function EpisodeHistoryList({
     <ul className="space-y-2">
       {episodes.map((episode) => {
         const isSelected = episode.id === selectedEpisodeId
+
+        function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onSelect(episode.id)
+          }
+        }
+
         return (
           <li key={episode.id}>
-            <button
-              type="button"
+            {/* A <div> rather than a <button>, so the "export" button below can be a
+                real, independently clickable <button> — nesting <button> inside
+                <button> is invalid HTML (see the same note in ThemePicker.tsx). */}
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => onSelect(episode.id)}
+              onKeyDown={handleKeyDown}
               aria-current={isSelected}
-              className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition ${
+              className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-left transition focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
                 isSelected
                   ? 'border-indigo-400 bg-indigo-500/10'
                   : 'border-slate-800 bg-slate-900 hover:border-slate-700 hover:bg-slate-800'
@@ -59,7 +74,8 @@ export function EpisodeHistoryList({
                   {episode.theme_label} · {dateFormatter.format(new Date(episode.created_at))}
                 </p>
               </div>
-            </button>
+              <ExportButton episodeId={episode.id} />
+            </div>
           </li>
         )
       })}

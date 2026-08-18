@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { LoadingState } from '../LoadingState'
 import { EpisodeHistoryList } from './EpisodeHistoryList'
 import { EpisodeSummary } from './EpisodeSummary'
+import { ExportButton } from './ExportButton'
 import { LessonBox } from './LessonBox'
 import { SceneCard } from './SceneCard'
 import { SeoPanel } from './SeoPanel'
@@ -195,7 +196,12 @@ export function EpisodeStudioPage() {
 
       {result && !generating && (
         <div className="mt-8 space-y-8">
-          <EpisodeSummary episode={result.episode} />
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <EpisodeSummary episode={result.episode} />
+            </div>
+            <ExportButton episodeId={result.id} className="shrink-0" />
+          </div>
 
           <div>
             <h2 className="text-xl font-semibold text-slate-100">Sahneler</h2>

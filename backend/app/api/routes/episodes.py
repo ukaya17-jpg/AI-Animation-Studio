@@ -2,9 +2,14 @@
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
-from app.api.dependencies import get_episode_service, get_optional_current_user, get_project_service
+from app.api.dependencies import (
+    get_episode_export_service,
+    get_episode_service,
+    get_optional_current_user,
+    get_project_service,
+)
 from app.models.user import User
 from app.schemas.episode import (
     EpisodeGenerateRequest,
@@ -12,6 +17,7 @@ from app.schemas.episode import (
     GeneratedEpisodeListResponse,
     ThemeSummaryResponse,
 )
+from app.services.episode_export import EpisodeExportService
 from app.services.episode_service import EpisodeService
 from app.services.project_service import ProjectService
 
@@ -128,6 +134,37 @@ async def get_generated_episode(
     if result["project_id"] is not None:
         await _authorize_project_access(result["project_id"], current_user, project_service)
     return EpisodeGenerationResponse.model_validate(result)
+
+
+@router.get(
+    "/{episode_id}/export",
+    summary="Download one previously generated episode as a YouTube-ready production ZIP",
+)
+async def export_generated_episode(
+    episode_id: uuid.UUID,
+    current_user: User | None = Depends(get_optional_current_user),  # noqa: B008
+    project_service: ProjectService = Depends(get_project_service),  # noqa: B008
+    service: EpisodeService = Depends(get_episode_service),  # noqa: B008
+    export_service: EpisodeExportService = Depends(get_episode_export_service),  # noqa: B008
+) -> Response:
+    """Bundle one persisted episode's script, SEO/Shorts text, and reference media into a ZIP.
+
+    Same visibility rule as ``GET /episodes/{episode_id}``: episodes linked to
+    a project are only downloadable by that project's owner (401/403);
+    project-less episodes stay openly downloadable.
+    """
+    result = await service.get_generated_episode(episode_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Generated episode not found.")
+    if result["project_id"] is not None:
+        await _authorize_project_access(result["project_id"], current_user, project_service)
+    archive_bytes = export_service.build(result)
+    filename = export_service.filename_for(result["episode"]["title"])
+    return Response(
+        content=archive_bytes,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.delete(

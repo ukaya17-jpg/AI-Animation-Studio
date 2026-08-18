@@ -13,6 +13,7 @@ from app.repositories.generated_episode_repository import GeneratedEpisodeReposi
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
+from app.services.episode_export import EpisodeExportService
 from app.services.episode_service import EpisodeService
 from app.services.health import HealthService
 from app.services.project_service import ProjectService
@@ -36,6 +37,11 @@ async def get_episode_service(
 ) -> EpisodeService:
     """Construct the episode use-case service backed by one request-scoped DB session."""
     return EpisodeService(repository=GeneratedEpisodeRepository(session))
+
+
+async def get_episode_export_service() -> EpisodeExportService:
+    """Construct the stateless episode production-package export service."""
+    return EpisodeExportService()
 
 
 async def get_auth_service(
