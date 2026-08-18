@@ -901,3 +901,45 @@ vermesi.
   EpisodeSummary video testi + bazı ilgisiz mevcut testler bu makinede
   RAM baskısı yüzünden kararsız — CI'daki gerçek koşum bu günlüğe
   ayrı bir girişle eklenecek.
+
+## [2026-08-18 06:55 UTC] CI doğrulaması ve gerçek bir hatanın düzeltilmesi
+- Durum: tamamlandı
+- Commit: `5efd9b9` (ana özellik) + takip commit'i (test düzeltmesi)
+- Notlar:
+  - Yukarıdaki not doğru şekilde CI'a bırakılmıştı ve bu doğru bir
+    karardı: **CI (`gh run view 32108709295`), backend ve frontend
+    job'larını yeşil geçti**, ama **e2e job'u gerçekten kırmızı
+    çıktı** — ve bu, sandbox'ın RAM baskısıyla İLGİSİZ, gerçek bir
+    hataydı. CI'ın loglarında "Target crashed" YOKTU (dedicated
+    runner'da bekleneceği gibi); bunun yerine net bir Playwright
+    assertion hatası vardı: `locator('dt', {hasText:'Mekan'}).locator('..')
+    .locator('video')` → "element(s) not found".
+  - **Kök neden**: `EpisodeSummary.tsx`'te `<LocationMedia>` (video),
+    `<dt>Mekan</dt>`'ın ebeveyni olan iç `<div>`'in bir KARDEŞİ —
+    içindeki bir eleman değil. `voice-samples.spec.ts`'teki aynı
+    desen ("Ana Karakter" için `dt`'nin ebeveynini alıp içinde
+    `<audio>`/buton arama) orada çalışıyordu çünkü o durumda dinleme
+    butonu `<dd>`'nin İÇİNDE (yani `dt`'nin ebeveyninin içinde)
+    yuvalanmış. Mekan bloğunda video `<dd>`'nin içinde değil, dt/dd
+    çiftini saran dış flex `<div>`'in bir kardeşi — yani `dt`'den
+    sadece bir üst seviye çıkmak yetmiyor, iki seviye çıkmak
+    gerekiyor. `location-video.spec.ts`'i
+    `.locator('dt', {hasText:'Mekan'}).locator('../..')` olacak
+    şekilde düzelttim (component koduna DOKUNMADIM — hata component'te
+    değil, testin DOM gezinme mantığındaydı).
+  - Bu, önceki girişte kurduğum hipotezi (çökmenin sadece/tamamen bu
+    sandbox'ın düşük RAM'i + video decode etkileşiminden kaynaklandığı)
+    KISMEN yanlışladı: iki ayrı sorun aynı anda vardı — (1) bu
+    sandbox'ta gerçek bir "Target crashed" (RAM baskısı, önceki
+    girişte belgelendiği gibi doğrulandı — orijinal videosuz kodda
+    aynı adım çökmüyordu, video eklenince çöküyordu, bu hâlâ geçerli
+    bir gözlem) VE (2) CI'ın (çökmeyen, bol RAM'li runner) ortaya
+    çıkardığı, sandbox'taki çökmenin MASKELEDİĞİ, tamamen ayrı ve
+    gerçek bir test-locator hatası. Bu tam olarak 3. turda kurulan
+    "asıl doğrulama her zaman GitHub Actions'ta yapılmalı" ilkesinin
+    neden önemli olduğunu kanıtlıyor: sandbox'ta yeşil görünen bir
+    şeye (ThemePicker testi kararlı yeşildi) güvenip durmuş olsaydım,
+    bu gerçek locator hatası main'de fark edilmeden kalabilirdi.
+  - Düzeltme sonrası: frontend lint+build tekrar temiz. Yeni commit
+    push edildi, CI'da e2e job'u tekrar izlendi (aşağıdaki girişe
+    bakın).

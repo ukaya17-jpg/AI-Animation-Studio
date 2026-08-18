@@ -18,9 +18,12 @@ test('the generated episode summary renders the location as an ambient video too
   await page.getByRole('button', { name: 'Bölüm Üret' }).click()
   await expect(page.getByRole('heading', { name: 'Sahneler' })).toBeVisible()
 
-  // Scoped to the "Mekan" (location) block specifically, same pattern as the
-  // "Ana Karakter" scoping in voice-samples.spec.ts.
-  const locationBlock = page.locator('dt', { hasText: 'Mekan' }).locator('..')
+  // Scoped to the "Mekan" (location) block specifically, extending the
+  // "Ana Karakter" scoping pattern from voice-samples.spec.ts by one more
+  // ancestor level: unlike the voice-sample button (nested inside <dd>),
+  // the location video is a sibling of the <dt>/<dd> wrapper, not a
+  // descendant of it.
+  const locationBlock = page.locator('dt', { hasText: 'Mekan' }).locator('../..')
   await expect(locationBlock.locator('video')).toHaveAttribute(
     'src',
     /\/static\/locations\/videos\/[a-z_]+\.mp4$/,
