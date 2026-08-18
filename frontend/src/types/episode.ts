@@ -9,6 +9,7 @@ export type ThemeSummary = {
   support_character_voice_sample_url: string
   location_name: string
   location_image_url: string
+  location_ambient_video_url: string
 }
 
 export type VoiceProfile = {
@@ -37,6 +38,7 @@ export type EpisodeLocation = {
   type: string
   description: string
   image_url: string
+  ambient_video_url: string
 }
 
 export type EpisodeScene = {
@@ -100,6 +102,7 @@ export type GeneratedEpisodeSummary = {
   support_character_voice_sample_url: string
   location_name: string
   location_image_url: string
+  location_ambient_video_url: string
   created_at: string
 }
 

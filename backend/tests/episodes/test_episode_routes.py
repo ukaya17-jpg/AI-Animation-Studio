@@ -38,6 +38,10 @@ async def test_list_themes_endpoint_returns_all_twenty_themes(client: httpx.Asyn
     )
     assert paylasma["location_name"]
     assert paylasma["location_image_url"] == "/static/locations/paylasim_bahcesi.png"
+    assert (
+        paylasma["location_ambient_video_url"]
+        == "/static/locations/videos/paylasim_bahcesi.mp4"
+    )
 
 
 async def test_generate_episode_endpoint_returns_episode_seo_and_shorts(
@@ -56,6 +60,9 @@ async def test_generate_episode_endpoint_returns_episode_seo_and_shorts(
     )
     assert body["episode"]["support_character"]["voice_sample_url"].startswith(
         "/static/characters/voices/"
+    )
+    assert body["episode"]["location"]["ambient_video_url"].startswith(
+        "/static/locations/videos/"
     )
     assert body["shorts"]["total_duration_seconds"] == 45
 

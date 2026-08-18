@@ -123,6 +123,7 @@ _LOCATIONS: tuple[EpisodeLocation, ...] = (
             "herkesin toplandığı dev bir meşe ağacı."
         ),
         image_url="/static/locations/buyuk_mese.png",
+        ambient_video_url="/static/locations/videos/buyuk_mese.mp4",
     ),
     EpisodeLocation(
         location_id="gokkusagi_nehri",
@@ -130,6 +131,7 @@ _LOCATIONS: tuple[EpisodeLocation, ...] = (
         type="Doğa / Keşif Alanı",
         description="Berrak, ışıltılı bir nehir. Doğa ve bilim temalı bölümler burada geçer.",
         image_url="/static/locations/gokkusagi_nehri.png",
+        ambient_video_url="/static/locations/videos/gokkusagi_nehri.mp4",
     ),
     EpisodeLocation(
         location_id="paylasim_bahcesi",
@@ -139,6 +141,7 @@ _LOCATIONS: tuple[EpisodeLocation, ...] = (
             "Herkesin birlikte sebze-meyve yetiştirdiği, hasadı paylaştığı ortak bahçe."
         ),
         image_url="/static/locations/paylasim_bahcesi.png",
+        ambient_video_url="/static/locations/videos/paylasim_bahcesi.mp4",
     ),
     EpisodeLocation(
         location_id="yildiz_tepesi",
@@ -149,6 +152,7 @@ _LOCATIONS: tuple[EpisodeLocation, ...] = (
             "Bölümler burada kapanır."
         ),
         image_url="/static/locations/yildiz_tepesi.png",
+        ambient_video_url="/static/locations/videos/yildiz_tepesi.mp4",
     ),
 )
 

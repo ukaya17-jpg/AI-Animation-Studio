@@ -50,6 +50,7 @@ class EpisodeService:
                     "support_character_voice_sample_url": support.voice_sample_url,
                     "location_name": location.name,
                     "location_image_url": location.image_url,
+                    "location_ambient_video_url": location.ambient_video_url,
                 }
             )
         return summaries
@@ -149,5 +150,6 @@ class EpisodeService:
             "support_character_voice_sample_url": support.voice_sample_url,
             "location_name": location.name,
             "location_image_url": location.image_url,
+            "location_ambient_video_url": location.ambient_video_url,
             "created_at": record.created_at,
         }

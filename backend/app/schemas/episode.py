@@ -29,6 +29,7 @@ class ThemeSummaryResponse(BaseModel):
     support_character_voice_sample_url: str
     location_name: str
     location_image_url: str
+    location_ambient_video_url: str
 
 
 class EpisodeResponse(BaseModel):
@@ -88,6 +89,7 @@ class GeneratedEpisodeSummaryResponse(BaseModel):
     support_character_voice_sample_url: str
     location_name: str
     location_image_url: str
+    location_ambient_video_url: str
     created_at: datetime
 
 

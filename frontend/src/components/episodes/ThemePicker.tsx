@@ -1,5 +1,6 @@
 import type { KeyboardEvent } from 'react'
 import type { ThemeSummary } from '../../types/episode'
+import { LocationMedia } from './LocationMedia'
 import { VoiceSampleButton } from './VoiceSampleButton'
 
 type ThemePickerProps = {
@@ -66,8 +67,9 @@ export function ThemePicker({ themes, selectedThemeId, onSelect }: ThemePickerPr
                   characterName={theme.support_character_name}
                 />
               </div>
-              <img
-                src={theme.location_image_url}
+              <LocationMedia
+                videoSrc={theme.location_ambient_video_url}
+                imageSrc={theme.location_image_url}
                 alt={theme.location_name}
                 className="h-9 w-14 rounded-md border border-slate-700 object-cover"
               />

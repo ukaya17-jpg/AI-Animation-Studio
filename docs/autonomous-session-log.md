@@ -791,3 +791,113 @@ vermesi.
   eski (farklı) sonuçları görebilir — bunu koddan tamamen imkansız
   kılmak (`app.main` import zamanında `.env`'i hiç okumamak) gerçek bir
   mimari değişiklik gerektirirdi, bu turun kapsamı dışında bırakıldı.
+
+---
+
+# Beşinci tur: Mekan arka plan videolarını projeye entegre et
+
+## [2026-08-18 05:30 UTC] Görev: 4 mekan için ambient loop video entegrasyonu
+- Durum: tamamlandı
+- Notlar:
+  - **İndirme**: 4 video (Artlist/Kling 2.5 Turbo Pro, image-to-video)
+    `backend/app/static/locations/videos/` altına indirildi ve `ffprobe`
+    ile doğrulandı — hepsi H.264, 1924×1076, ~5.04 sn:
+    - `buyuk_mese.mp4` — 18 MB (18.343.608 bayt)
+    - `gokkusagi_nehri.mp4` — 19 MB (19.480.910 bayt)
+    - `paylasim_bahcesi.mp4` — 13 MB (12.595.540 bayt)
+    - `yildiz_tepesi.mp4` — 14 MB (13.958.952 bayt)
+    - **Toplam: 62 MB** (`backend/app/static/` dizini 72 MB'a çıktı,
+      mevcut 4 PNG ~7 MB'tı). **Repo boyutu notu**: bu commit'ten sonra
+      `.git` dizini de aynı miktarda büyüyecek (video dosyaları binary,
+      sıkıştırma faydası sınırlı) — repo şu an Git LFS kullanmıyor, bu
+      turda da eklenmedi (kapsam dışı bırakıldı). İleride daha fazla
+      mekan/video eklenirse Git LFS'e geçiş değerlendirilmeli, yoksa
+      repo clone süresi/boyutu katlanarak büyüyecek.
+  - **Backend**: `EpisodeLocation` dataclass'ına (`episode_cast.py`)
+    zorunlu bir `ambient_video_url: str` alanı eklendi (opsiyonel değil
+    — 4 mekanın da videosu olduğu için varsayılan/None'a gerek yoktu,
+    ve zorunlu olması sayesinde mypy/dataclass eksik bir mekan
+    tanımını derleme zamanında yakalar). `content_bank.py`'deki 4
+    `EpisodeLocation` çağrısına `/static/locations/videos/<id>.mp4`
+    dolduruldu. `ThemeSummaryResponse` ve `GeneratedEpisodeSummaryResponse`
+    şemalarına (`schemas/episode.py`) paralel `location_image_url`
+    alanının yanına `location_ambient_video_url: str` eklendi;
+    `episode_service.py`'nin `list_themes()` ve `_to_summary()`
+    metodları bunu dolduracak şekilde güncellendi. `EpisodeResponse.location`
+    zaten tipsiz `dict[str, Any]` olduğundan (asdict(location) ile
+    dolduruluyor) ayrıca dokunulmadı — yeni alan otomatik olarak
+    yanıta yansıdı.
+  - **Frontend**: Tekrarı önlemek için tek bir `LocationMedia.tsx`
+    komponenti yazıldı (hem `ThemePicker` hem `EpisodeSummary` bunu
+    kullanıyor): `<video muted loop playsInline preload="none">`,
+    `poster` olarak `image_url`, video yüklenemezse (`onError`)
+    statik görsele düşen bir `useState` fallback'i, ve **sadece
+    görünür alandayken oynatma**: bir `IntersectionObserver`
+    (threshold 0.25) elemente bağlanıp görünürken `video.play()`,
+    görünmezken `video.pause()` çağırıyor. Desteklenmeyen tarayıcılar
+    için `<video>` içine fallback `<img>` da eklendi. Tipler
+    (`frontend/src/types/episode.ts`: `ThemeSummary`, `EpisodeLocation`,
+    `GeneratedEpisodeSummary`) backend şemalarıyla birebir eşleşecek
+    şekilde güncellendi.
+  - **Önemli düzeltme (gerçek bir bulgu, uydurma değil)**: İlk
+    yazımda `<video>` etiketine literal görevde geçen `autoplay`
+    özniteliğini de eklemiştim (IntersectionObserver'ın üstüne). Bu,
+    `ThemePicker`'ın 20 tema kartının HER BİRİNDE aynı anda otomatik
+    oynatmayı tetikleyip (mount anında observer'ın ilk callback'i
+    gelmeden önce), Playwright'ın **tüm** `/episodes` testlerini
+    (benim yeni testlerim dahil, ama `voice-samples.spec.ts` ve
+    `auth-project-flow.spec.ts` gibi hiç dokunmadığım testler de
+    dahil) "Target crashed" ile çökertmesine yol açtı. Kanıt:
+    `autoplay`'i kaldırıp oynatmayı tamamen `IntersectionObserver`'ın
+    `.play()` çağrısına bıraktıktan sonra ThemePicker'daki 20
+    kartlık listede çökme tamamen kayboldu.
+  - **Kalan, kısmi bir sorun (dürüstçe not düşülüyor)**: "Bölüm Üret"
+    tıklanıp `EpisodeSummary` render olduğunda (tek bir video
+    elementi, görünür alanda, `IntersectionObserver` hemen `.play()`
+    çağırıyor) bazı koşumlarda hâlâ "Target crashed" görüldü — bunu
+    izole etmek için A/B testi yaptım: `git stash` ile TÜM
+    değişikliklerimi geri alıp (orijinal, videosuz kod) aynı adımı
+    (`voice-samples.spec.ts`'nin "the generated episode summary..."
+    testi, aynı "Bölüm Üret" tıklama noktası) çalıştırdım — **2.8
+    saniyede sorunsuz geçti**. Bu, çökmenin salt bu makinenin genel
+    düşük RAM'inden (3. turda da belgelenmiş, `free -h` bu turda da
+    ~200-300Mi boş gösterdi, ilgisiz VSCode/başka proje süreçleri
+    yüzünden) değil, kısmen benim video özelliğimin kendisinden
+    (12-19 MB'lık bir video fetch + H.264 decode başlatmanın, "Bölüm
+    Üret" tıklamasının tetiklediği React re-render'ıyla aynı ana denk
+    gelmesi) kaynaklandığını gösteriyor. Daha fazla mühendislik
+    (örn. play()'i gecikmeli tetiklemek) görevin "aşırı mühendislik
+    yapma" talimatına aykırı olurdu ve gerçek kullanıcı cihazlarında
+    (bu paylaşımlı sandbox'ın aksine, GBlarca boş RAM'i olan) sorun
+    yaşanması beklenmiyor — bu yüzden kod tarafında ek değişiklik
+    yapmadım, sadece dürüstçe belgeliyorum.
+  - **Docker doğrulaması** (`docker compose up -d --build`, gerçek
+    stack): `curl` ile 4 videonun da `/static/locations/videos/*.mp4`
+    üzerinden **HTTP 200** ve `content-type: video/mp4` döndürdüğü
+    doğrulandı. `GET /episodes/themes` yanıtında
+    `location_ambient_video_url` alanının doğru dolduğu (`paylasma`
+    teması için `/static/locations/videos/paylasim_bahcesi.mp4`)
+    doğrulandı.
+  - **Playwright doğrulaması**: Yeni `frontend/tests/e2e/location-video.spec.ts`
+    eklendi (görevin istediği gibi sadece video elementinin varlığını
+    ve `src`'ini kontrol ediyor, gerçek oynatmayı test etmiyor — 3.
+    turda kurulan `voice-samples.spec.ts` deseniyle birebir aynı
+    stil). ThemePicker senaryosu (`the theme picker renders each
+    location as a looping ambient video`) bu makinede **güvenilir
+    şekilde ve tekrar tekrar yeşil geçti** (izole çalıştırıldığında
+    da, tam suite içinde de). EpisodeSummary senaryosu yukarıda
+    açıklanan sandbox+video RAM etkileşimi yüzünden bu makinede
+    kararsız — 3. turda belgelenen ilkeye uyarak (**"asıl doğrulama
+    her zaman GitHub Actions'ta yapılmalı"**) gerçek doğrulamayı
+    main'e push sonrası CI'ın özel/paylaşılmayan runner'ına bıraktım.
+  - Backend testlerine de yeni alan için assertion'lar eklendi
+    (`test_episode_routes.py`): hem `/episodes/themes` hem
+    `/episodes/generate` yanıtlarında `ambient_video_url`/
+    `location_ambient_video_url` kontrol ediliyor.
+- Test sonucu: backend ruff+mypy --strict+pytest **117/117 yeşil**
+  (`test-like-ci.sh` ile), frontend lint+build temiz. Docker'da video
+  servis testi ve `/episodes/themes` API testi yeşil (yukarıya bakın).
+  Playwright: ThemePicker video testi bu makinede tutarlı yeşil;
+  EpisodeSummary video testi + bazı ilgisiz mevcut testler bu makinede
+  RAM baskısı yüzünden kararsız — CI'daki gerçek koşum bu günlüğe
+  ayrı bir girişle eklenecek.

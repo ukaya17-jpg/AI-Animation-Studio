@@ -1,4 +1,5 @@
 import type { Episode } from '../../types/episode'
+import { LocationMedia } from './LocationMedia'
 import { VoiceSampleButton } from './VoiceSampleButton'
 
 type EpisodeSummaryProps = { episode: Episode }
@@ -50,8 +51,9 @@ export function EpisodeSummary({ episode }: EpisodeSummaryProps) {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <img
-            src={episode.location.image_url}
+          <LocationMedia
+            videoSrc={episode.location.ambient_video_url}
+            imageSrc={episode.location.image_url}
             alt={episode.location.name}
             className="h-12 w-16 shrink-0 rounded-md border border-slate-700 object-cover"
           />

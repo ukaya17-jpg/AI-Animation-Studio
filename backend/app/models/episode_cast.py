@@ -40,6 +40,7 @@ class EpisodeLocation:
     type: str
     description: str
     image_url: str
+    ambient_video_url: str
 
 
 @dataclass(frozen=True, slots=True)
