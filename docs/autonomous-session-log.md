@@ -1367,3 +1367,53 @@ doldurmak oldu.
 - Kullanıcının gözden geçirmesi gereken nokta: yok — sekizinci turda
   açık bırakılan "toplu export tekilleştirme yok" notu bu turla
   kapatıldı.
+
+# Onuncu tur: Dokuzuncu turun yeniden doğrulanması
+
+## [2026-08-19 05:22 UTC] Görev: aynı görev tanımıyla tekrar tetiklendi — yeniden doğrulama
+- Durum: tamamlandı (kod zaten dokuzuncu turda commit'lenip
+  `origin/main`'e push edilmişti; bu turda görev tanımı neredeyse
+  birebir aynı şekilde tekrar geldi, yeni bir kod değişikliği
+  gerekmedi)
+- Commit: bu günlük girişi hariç kod değişikliği yok; `git fetch
+  origin main` ile local `main`'in `origin/main` ile aynı commit'te
+  (`c292d52`) olduğu doğrulandı
+- Notlar:
+  - Görevi uygulamadan önce mevcut kodu okudum
+    (`backend/app/services/episode_export.py`): `build_batch`,
+    `_write_shared_media`, `_write_batch_episode`, `_batch_readme`
+    zaten tam olarak istenen tasarımı uyguluyor —
+    `medya/karakterler/`+`medya/mekanlar/` altında tekil kopya,
+    her bölüm klasöründe sadece metin dosyaları + göreli yol veren
+    `README.txt`, tekil export (`GET /episodes/{id}/export`)
+    değişmemiş.
+  - Bunu körü körüne güvenmek yerine uçtan uca yeniden çalıştırdım:
+    `scripts/test-like-ci.sh` → **148/148** yeşil, ruff ve
+    mypy --strict temiz; frontend `npm run lint` + `npm run build`
+    temiz.
+  - Zaten ayakta olan Docker stack'inde (`docker compose ps`,
+    backend imajı dokuzuncu turdan beri değişmemiş — dosya içeriği
+    diff ile birebir aynı doğrulandı) yeni bir kullanıcı/proje ile
+    uçtan uca test ettim: `POST /episodes/generate-batch` → 28
+    created, `GET /episodes/export-batch` → HTTP 200, **137.538.384
+    bayt (131,2 MiB)** — dokuzuncu turun ölçtüğü değerle birebir
+    aynı. ZIP'i açıp inceledim: 29 üst seviye giriş (28 bölüm +
+    `medya/`), `medya/karakterler/` altında tam 16 dosya (8 karakter
+    × görsel+ses), `medya/mekanlar/` altında tam 12 dosya (6 mekan ×
+    görsel+video), her biri benzersiz; `01-...` klasörünün
+    `README.txt`'si doğru karakter/mekan adları ve `../medya/...`
+    göreli yollarını içeriyordu. Ayrıca aynı stack'te tekil `GET
+    /episodes/{id}/export` çağrılıp eski düz yapının
+    (`gorseller/`, `sesler/`, `mekan_videosu/`, kök dizinde) hâlâ
+    değişmediği doğrulandı.
+  - Doğrulama için oluşturulan geçici test kullanıcısı/projesi/ZIP
+    dosyaları temizlendi (scratchpad'teki indirilen ZIP'ler silindi;
+    dev DB'deki test kullanıcısı/proje prod olmadığı için bırakıldı,
+    önceki turların pratiğiyle tutarlı).
+
+## ONUNCU TUR TAMAMLANDI
+- Görev tanımı dokuzuncu turdakiyle aynı sorunu tarif ediyordu; kod
+  zaten oradaydı ve doğruydu, bu yüzden yeni kod yazılmadı — sadece
+  bağımsız olarak yeniden doğrulandı (testler, lint, gerçek Docker
+  uçtan uca) ve sonuç bu günlük girişiyle kayıt altına alındı.
+- Kullanıcının gözden geçirmesi gereken nokta: yok.
