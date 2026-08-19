@@ -60,3 +60,47 @@ seslendirilmesi) otomatikleştirilmek istenirse:
 2. Bu, yeni bir dış servis çağrısı (ve muhtemelen bir API anahtarı/kredi
    maliyeti) gerektirir — bu rehber sadece referans bilgisidir, otomatik bir
    entegrasyon bu oturumda yapılmadı.
+
+## Konuşan Karakter Videosu (Dudak Senkronu) — Maliyet Notu
+
+Artlist'in "Seedance 2.5" modeli (modelId 3002, multi-to-video özelliği),
+bir karakter görseli + bir ses dosyası referans alarak o karakterin
+gerçekten o sesle konuştuğu, dudak senkronlu bir video üretebiliyor.
+
+**Maliyet:** ~500 kredi/saniye video (6 saniyelik bir klip ≈ 3.000 kredi).
+Karşılaştırma: statik görsel ≈ 160 kredi, ambient mekan videosu ≈ 750
+kredi/5sn. Yani dudak senkronlu konuşma, en pahalı üretim türü.
+
+**Kritik nokta — stil kilidi gerekli:** Prompt'ta görsel stili açıkça
+zorlamazsan (düz vektör/2D çizgi film), model karakteri fotogerçekçi/3D
+bir görünüme çeviriyor — bu, kanalın görsel kimliğini bozar. Çalışan
+prompt formülü:
+
+> "STYLE LOCK: flat 2D vector cartoon illustration, exactly matching the
+> input reference image's art style — simple flat colors, bold clean
+> black outlines, NO 3D rendering, NO photorealism... [karakter+konuşma
+> tarifi]... Character design, proportions, colors and line style must
+> stay IDENTICAL to the reference image — only the mouth/eyes animate."
+
+**Bütçe gerçeği:** 28 bölümlük bir seride, ortalama bölüm başına ~8-10
+konuşma repliği olsa, tam animasyon için gereken kredi tüm aylık planı
+(16.500 kredi) çok aşar. Bu yöntem şu an sadece "vitrin/tanıtım" amaçlı
+kullanılabilir, tam otomatik bölüm animasyonu için değil — ya çok daha
+büyük bir kredi bütçesi ya da farklı (muhtemelen daha ucuz) bir üretim
+yöntemi gerekir.
+
+**Mevcut durum:** Bu yöntemle şu an SADECE Kurnaz için tek bir demo video
+üretildi — `backend/app/static/characters/talking_samples/kurnaz_demo.mp4`
+(bütçe yetersizliği nedeniyle diğer 7 karaktere sistematik olarak
+uygulanmadı). `EpisodeCharacter` dataclass'ında (`app/models/episode_cast.py`)
+opsiyonel bir `talking_sample_url: str | None = None` alanı var; sadece
+Kurnaz'ın `content_bank.py`'deki kaydında dolu, diğer 7 karakterde `None`.
+
+`GET /episodes/themes` yanıtında `lead_character_talking_sample_url` /
+`support_character_talking_sample_url` olarak, null-safe şekilde (dolu
+değilse `null`) dışa aktarılıyor. Frontend'de `ThemePicker`, bu alan
+doluysa (yalnızca Kurnaz'ın lider olduğu temalarda) karakter avatarlarının
+altında küçük bir "🎬 Canlandırılmış Örneği Gör" rozeti gösteriyor;
+tıklanınca video bir modal'da oynatılıyor (`TalkingSampleButton` bileşeni).
+Tek bölüm/toplu export ZIP'lerine bu video dahil edilmiyor — sadece
+uygulama içi bir vitrin özelliği.

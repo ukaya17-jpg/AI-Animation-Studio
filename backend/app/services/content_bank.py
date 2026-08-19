@@ -130,6 +130,7 @@ _CHARACTERS: tuple[EpisodeCharacter, ...] = (
         ),
         image_url="/static/characters/kurnaz.png",
         voice_sample_url="/static/characters/voices/kurnaz.mp3",
+        talking_sample_url="/static/characters/talking_samples/kurnaz_demo.mp4",
     ),
     EpisodeCharacter(
         character_id="diken",

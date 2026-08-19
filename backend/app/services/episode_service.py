@@ -31,7 +31,7 @@ class EpisodeService:
         self._shorts = shorts or EpisodeShortsService()
         self._content_bank = content_bank or ContentBank()
 
-    def list_themes(self) -> list[dict[str, str]]:
+    def list_themes(self) -> list[dict[str, str | None]]:
         """Return every theme's id, label, and cast/location image URLs, in catalog order."""
         summaries = []
         for theme in self._generator.list_themes():
@@ -45,9 +45,11 @@ class EpisodeService:
                     "lead_character_name": lead.name,
                     "lead_character_image_url": lead.image_url,
                     "lead_character_voice_sample_url": lead.voice_sample_url,
+                    "lead_character_talking_sample_url": lead.talking_sample_url,
                     "support_character_name": support.name,
                     "support_character_image_url": support.image_url,
                     "support_character_voice_sample_url": support.voice_sample_url,
+                    "support_character_talking_sample_url": support.talking_sample_url,
                     "location_name": location.name,
                     "location_image_url": location.image_url,
                     "location_ambient_video_url": location.ambient_video_url,

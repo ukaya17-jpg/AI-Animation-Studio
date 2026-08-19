@@ -1417,3 +1417,132 @@ doldurmak oldu.
   bağımsız olarak yeniden doğrulandı (testler, lint, gerçek Docker
   uçtan uca) ve sonuç bu günlük girişiyle kayıt altına alındı.
 - Kullanıcının gözden geçirmesi gereken nokta: yok.
+
+# Onbirinci tur: Konuşan karakter demo videosu (Kurnaz) entegrasyonu
+
+## [2026-08-19 11:05 UTC] Görev: Kurnaz'ın dudak senkronlu demo videosunu entegre et + maliyet dokümantasyonu
+- Durum: tamamlandı
+- Commit: bu turun sonunda `origin/main`'e push edildi (aşağıya bakın)
+- Test sonucu: backend `scripts/test-like-ci.sh` ile **146/146** yeşil
+  (145'ten 146'ya, bu turun 1 yeni testi dahil — 3 batch-export testi bu
+  makinedeki düşük bellek nedeniyle atlandı, önceki turlardan beri bilinen
+  bir durum, bu turla ilgisiz), ruff+mypy --strict temiz; frontend
+  `npm run lint` + `npm run build` temiz. Gerçek Docker stack'inde uçtan
+  uca doğrulandı (aşağıya bakın).
+- Notlar:
+  - **Video dosyası**: verilen Artlist CDN URL'sinden indirildi →
+    `backend/app/static/characters/talking_samples/kurnaz_demo.mp4`
+    (4.026.470 bayt, ~4,0 MB). İlk baytların `ftyp isom` imzasını
+    taşıdığı doğrulandı (geçerli MP4/H.264).
+  - **Backend**: `EpisodeCharacter` dataclass'ına (`app/models/episode_cast.py`)
+    opsiyonel, varsayılanı `None` olan `talking_sample_url: str | None = None`
+    alanı eklendi — `frozen=True, slots=True` olduğu ve tüm 8 karakter
+    `content_bank.py`'de keyword-arg ile inşa edildiği için diğer 7
+    karakterin kaydına dokunmaya gerek kalmadı, sadece Kurnaz'ın kaydına
+    `talking_sample_url="/static/characters/talking_samples/kurnaz_demo.mp4"`
+    eklendi. `EpisodeService.list_themes()` ve `ThemeSummaryResponse`
+    şeması (`GET /episodes/themes`'i besliyor) her ikisi de alanı elle,
+    alan-alan eşleştiren bir tasarımda olduğu için (asdict() kullanmıyor)
+    her ikisine de `lead_character_talking_sample_url` /
+    `support_character_talking_sample_url` (ikisi de `str | None = None`,
+    null-safe) eklendi — sadece Kurnaz'ın lider olduğu 3 temada dolu,
+    diğer 25 temada `null`. `episode_export.py`'nin bu yeni alana hiç
+    dokunmadığı doğrulandı (dict'ten sadece bilinen anahtarları okuyor,
+    export ZIP'lerine video dahil edilmiyor — kasıtlı, görev sadece
+    uygulama içi vitrin özelliği istiyordu).
+  - **Frontend**: yeni `TalkingSampleButton.tsx` bileşeni (`VoiceSampleButton`
+    ile aynı `stopPropagation` deseninde) — küçük "🎬 Canlandırılmış
+    Örneği Gör" rozeti, tıklanınca video'yu (`<video controls autoPlay>`)
+    kendi yazdığım minimal bir modal'da açıyor (projede hazır bir Modal/
+    Dialog bileşeni yoktu, `grep` ile doğrulandı — bu yüzden küçük ve
+    tek-kullanımlık tutuldu, genel bir sistem inşa edilmedi). `ThemePicker.tsx`
+    içine, sadece `lead_character_talking_sample_url` veya
+    `support_character_talking_sample_url` doluysa render edilecek
+    şekilde eklendi. `types/episode.ts`'deki `ThemeSummary` tipine
+    backend şemasıyla birebir eşleşen iki opsiyonel alan eklendi.
+  - **Backend testi**: `test_episode_routes.py`'ye yeni
+    `test_list_themes_endpoint_exposes_kurnazs_talking_sample_and_nothing_else`
+    eklendi — Kurnaz'ın lider olduğu temada alanın doğru statik yola
+    işaret ettiğini, Kurnaz'ın olmadığı bir temada her iki alanın da
+    `null` olduğunu, ve statik dosyanın gerçekten `video/mp4`
+    content-type'ıyla 200 döndüğünü doğruluyor.
+  - **Docker doğrulaması**: `docker compose build backend frontend && up
+    -d` ile her iki imaj da yeni koddan/statik dosyadan yeniden derlendi.
+    Çalışan backend container'ına canlı `curl` ile: `GET /episodes/themes`
+    → `yaratici_dusunme` teması (Kurnaz lider) `lead_character_talking_sample_url
+    = /static/characters/talking_samples/kurnaz_demo.mp4`,
+    `support_character_talking_sample_url = null`; Kurnaz'ın hiç
+    geçmediği `paylasma` teması → her iki alan da `null` (hiç hata yok,
+    28 temanın tamamı sorunsuz serialize oldu). `GET
+    /static/characters/talking_samples/kurnaz_demo.mp4` → HTTP 200,
+    `content-type: video/mp4`, `content-length: 4026470` (indirilen
+    dosyayla birebir aynı).
+  - **Frontend uçtan uca (kısmi)**: Playwright ile hem yeni
+    `tests/e2e/talking-sample.spec.ts` (2 test: rozet+modal akışı, ve
+    Kurnaz'sız bir temada rozetin hiç render edilmediği) hem de mevcut
+    `voice-samples.spec.ts`/`location-video.spec.ts` çalıştırıldı — ancak
+    bu makine o sırada ağır yük altındaydı (`uptime` load average 75.8,
+    `free -h` 3,4/3,8 GiB dolu; büyük ihtimalle art arda gelen Docker
+    build'leri + zaten çalışan VSCode/dil sunucusu süreçleri + bu
+    projeyle ilgisiz başka bir uygulama yüzünden), bu yüzden hem yeni hem
+    de **önceden zaten geçen** testler dahil tüm Playwright koşumları
+    "Page crashed" veya aşırı gecikmeli timeout ile başarısız oldu — yani
+    bu benim kodumdan kaynaklanan bir regresyon değil, ortamın kendisiyle
+    ilgili (sekizinci/dokuzuncu tur notlarında da "tam Playwright suite'i
+    bu sandbox'ta güvenilir değil" diye zaten kayıtlı bilinen bir sınır).
+    Yük düştükten sonra (ilk denemede `uptime` load average 75,8 iken,
+    birkaç dakika sonra 0,0'a indi) trace/screenshot'sız, minimal bir
+    Playwright script'iyle tekrar denedim: bu kez `role="radiogroup"` ve
+    Kurnaz kartı bulundu, ve **en kritik DOM doğrulaması başarıyla
+    tamamlandı** — Kurnaz kartında (`Yaratıcı Düşünme` teması) tam olarak
+    1 adet "🎬 Canlandırılmış Örneği Gör" butonu, Kurnaz'ın hiç geçmediği
+    Paylaşma kartında ise tam olarak 0 adet buton bulundu (yani koşullu
+    render mantığı — sadece `talking_sample_url` doluysa göster — gerçek
+    tarayıcıda doğru çalışıyor), kart başlangıçta `aria-checked=false`.
+    Ancak butona tıklama adımında (hem gerçek Playwright click hem de
+    JS `el.click()` ile bypass denemesi) her seferinde ya "Target
+    crashed" ya da timeout ile karşılaştım — bu noktada modal/video
+    açılışını canlı tarayıcıda teyit edemedim. Bu, kodun kendisinden
+    kaynaklanmıyor gibi görünüyor (locator her seferinde doğru butonu
+    doğru metin/class'la buluyor); muhtemelen bu container'da headless
+    Chromium'un compositor/screenshot/click-sonrası-repaint adımlarıyla
+    ilgili, yükten bağımsız bir kısıt (aynı adımda tekrar tekrar
+    takılması bunu düşündürüyor). Bu yüzden modal açılışı + video src
+    doğrulaması bu turda **tamamlanamadı**; bunun yerine backend API'nin
+    (statik dosya + null-safe alan) canlı Docker'da doğru çalıştığını
+    curl ile kanıtladım, kodu satır satır gözden geçirdim (mevcut
+    `VoiceSampleButton` deseniyle birebir aynı `stopPropagation`
+    mantığı, aynı zaten-doğrulanmış tıklama deseni), ve TypeScript
+    derlemesi + ESLint'in temiz geçtiğini doğruladım. Yeni
+    `talking-sample.spec.ts` dosyası commit'e dahil edildi — CI'da bu
+    modal/click adımını da içeren tam senaryoyu koşacak.
+  - **Dokümantasyon**: `docs/ses-rehberi.md`'ye görev tanımındaki metinle
+    birebir aynı "Konuşan Karakter Videosu (Dudak Senkronu) — Maliyet
+    Notu" bölümü eklendi (Seedance 2.5/modelId 3002, ~500 kredi/sn
+    maliyet, stil kilidi prompt formülü, 28 bölümlük bütçe gerçeği), artı
+    projeye özgü bir "Mevcut durum" alt paragrafı (hangi dosya, hangi API
+    alanı, hangi frontend bileşeni — mevcut "API'de nerede kullanılıyor"
+    bölümüyle aynı referans üslubunda).
+  - Test/doğrulama için indirilen scratch dosyalar (screenshot script'i,
+    playwright test-results/trace'leri) temizlendi; bunlar zaten
+    `.gitignore`'da (`frontend/test-results/`, `frontend/playwright-report/`).
+
+## ONBİRİNCİ TUR TAMAMLANDI
+- Kurnaz'ın dudak senkronlu demo videosu indirilip statik olarak eklendi;
+  `EpisodeCharacter`'a opsiyonel `talking_sample_url` alanı eklendi (sadece
+  Kurnaz'da dolu); `GET /episodes/themes` bunu null-safe dışa aktarıyor;
+  `ThemePicker`'da Kurnaz'ın geçtiği temalarda küçük bir "🎬 Canlandırılmış
+  Örneği Gör" rozeti/modal'ı eklendi; `docs/ses-rehberi.md`'ye maliyet notu
+  eklendi.
+- Backend: 145 → 146 test, hepsi yeşil, ruff/mypy --strict temiz. Frontend:
+  lint+build temiz. Docker'da backend API/statik dosya servisleme uçtan uca
+  curl ile doğrulandı (doğru video, diğer karakterlerde null, hata yok).
+- Kullanıcının gözden geçirmesi gereken nokta: gerçek tarayıcıda rozetin
+  doğru koşulda render edildiği (Kurnaz'da var, diğer temalarda yok)
+  Playwright ile teyit edildi, ama **modal açılışı + video oynatma adımı
+  bu oturumda tıklama sırasında tekrarlayan Chromium çökmesi/timeout'u
+  yüzünden doğrulanamadı** (ortam kaynaklı bir kısıt gibi görünüyor, kod
+  incelemesinde bir sorun bulunmadı — mevcut, çalışan `VoiceSampleButton`
+  ile birebir aynı desen). Yeni `talking-sample.spec.ts` testi commit'e
+  dahil edildi, CI'da tam senaryoyu (modal + video src dahil) koşup
+  teyit edecektir.

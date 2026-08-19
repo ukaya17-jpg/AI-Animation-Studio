@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from 'react'
 import type { ThemeSummary } from '../../types/episode'
 import { LocationMedia } from './LocationMedia'
+import { TalkingSampleButton } from './TalkingSampleButton'
 import { VoiceSampleButton } from './VoiceSampleButton'
 
 type ThemePickerProps = {
@@ -74,6 +75,19 @@ export function ThemePicker({ themes, selectedThemeId, onSelect }: ThemePickerPr
                 className="h-9 w-14 rounded-md border border-slate-700 object-cover"
               />
             </div>
+            {(theme.lead_character_talking_sample_url ?? theme.support_character_talking_sample_url) && (
+              <TalkingSampleButton
+                src={
+                  (theme.lead_character_talking_sample_url ??
+                    theme.support_character_talking_sample_url) as string
+                }
+                characterName={
+                  theme.lead_character_talking_sample_url
+                    ? theme.lead_character_name
+                    : theme.support_character_name
+                }
+              />
+            )}
             <p className="mt-2">{theme.label}</p>
           </div>
         )

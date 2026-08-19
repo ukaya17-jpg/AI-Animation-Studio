@@ -4,9 +4,11 @@ export type ThemeSummary = {
   lead_character_name: string
   lead_character_image_url: string
   lead_character_voice_sample_url: string
+  lead_character_talking_sample_url?: string | null
   support_character_name: string
   support_character_image_url: string
   support_character_voice_sample_url: string
+  support_character_talking_sample_url?: string | null
   location_name: string
   location_image_url: string
   location_ambient_video_url: string

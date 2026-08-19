@@ -47,9 +47,11 @@ class ThemeSummaryResponse(BaseModel):
     lead_character_name: str
     lead_character_image_url: str
     lead_character_voice_sample_url: str
+    lead_character_talking_sample_url: str | None = None
     support_character_name: str
     support_character_image_url: str
     support_character_voice_sample_url: str
+    support_character_talking_sample_url: str | None = None
     location_name: str
     location_image_url: str
     location_ambient_video_url: str

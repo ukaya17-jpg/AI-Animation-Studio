@@ -80,6 +80,36 @@ async def test_list_themes_endpoint_includes_the_new_cast_and_locations(
     assert umut["lead_character_voice_sample_url"] == "/static/characters/voices/isik.mp3"
 
 
+async def test_list_themes_endpoint_exposes_kurnazs_talking_sample_and_nothing_else(
+    client: httpx.AsyncClient,
+) -> None:
+    """Only Kurnaz has a lip-synced talking-sample demo video (see docs/ses-rehberi.md
+    for why the rest of the cast doesn't yet — it's expensive to produce). Every other
+    character's cast slot must serialize the field as a plain null, not omit it or error."""
+    response = await client.get("/episodes/themes")
+
+    assert response.status_code == 200
+    body = response.json()
+
+    yaratici_dusunme = next(item for item in body if item["theme_id"] == "yaratici_dusunme")
+    assert yaratici_dusunme["lead_character_name"] == "Kurnaz"
+    assert (
+        yaratici_dusunme["lead_character_talking_sample_url"]
+        == "/static/characters/talking_samples/kurnaz_demo.mp4"
+    )
+    assert yaratici_dusunme["support_character_talking_sample_url"] is None
+
+    paylasma = next(item for item in body if item["theme_id"] == "paylasma")
+    assert paylasma["lead_character_name"] != "Kurnaz"
+    assert paylasma["support_character_name"] != "Kurnaz"
+    assert paylasma["lead_character_talking_sample_url"] is None
+    assert paylasma["support_character_talking_sample_url"] is None
+
+    static_response = await client.get(yaratici_dusunme["lead_character_talking_sample_url"])
+    assert static_response.status_code == 200
+    assert static_response.headers["content-type"] == "video/mp4"
+
+
 async def test_generate_episode_endpoint_returns_episode_seo_and_shorts(
     client: httpx.AsyncClient,
 ) -> None:
