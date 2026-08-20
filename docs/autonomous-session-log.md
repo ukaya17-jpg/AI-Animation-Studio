@@ -1546,3 +1546,41 @@ doldurmak oldu.
   ile birebir aynı desen). Yeni `talking-sample.spec.ts` testi commit'e
   dahil edildi, CI'da tam senaryoyu (modal + video src dahil) koşup
   teyit edecektir.
+
+## ONİKİNCİ TUR TAMAMLANDI
+- Onbirinci turun CI run'ı (`32250978059`, commit `9bb5e6f`) kontrol edildi:
+  üç job da (frontend, backend, Playwright) yeşil; `talking-sample.spec.ts`
+  içindeki iki test de CI'da geçti (10/10 test yeşil) — bu sandbox'ta
+  doğrulanamayan modal/tıklama adımı CI'da sorunsuz çalıştı, demek ki
+  önceki turda gözlemlenen Chromium çökmesi kod değil, bu geliştirme
+  kutusuna özgü bir ortam kısıtıymış.
+- `EpisodeExportService`'e `assembly-manifest.json` üretimi eklendi:
+  `GET /episodes/{id}/export` (tekil) ve `/episodes/export-batch` (toplu)
+  ZIP'lerine, insan-okunabilir dosyaların yanına, DaVinci Resolve Python
+  script'inin okuyacağı makine-okunabilir bir sahne-sahne manifest
+  eklendi (`episodeId`, `title`, `themeKey`, `fps: 30`,
+  `resolution: 1920x1080`, ve her sahne için `backgroundFile`,
+  `characterImage`, `audioFile`, `captionText`, `speaker`). Tamamen
+  additive — mevcut hiçbir dosya/davranış değişmedi.
+  - `audioFile`, sahne başına gerçek bir seslendirme dosyasının bu
+    projede henüz otomatik üretilmediği için (sadece kısa karakter ses
+    örnekleri `sesler/`'e ekleniyor) `<sahneNo>-<sahneAdı>-<konuşmacı>.mp3`
+    deterministik adlandırma kuralına göre hesaplanıyor —
+    `audioDurationSeconds` bu yüzden `null` (script dosyadan kendisi
+    okuyacak). Bu adlandırma kuralı, bir önceki turda "Paylaşma" bölümü
+    için elle indirilen 5 ses dosyasının (`01-acilis-findik.mp3` vb.)
+    isimleriyle birebir örtüşüyor — Docker'da gerçek bir export ile
+    doğrulandı.
+  - Tekil export'ta yollar yerel (`gorseller/`, `mekan_videosu/`); toplu
+    export'ta paylaşılan medyaya göre (`../medya/karakterler/`,
+    `../medya/mekanlar/`) — mevcut `README.txt` şablonlarıyla aynı iki
+    düzen kullanıldı.
+- Test: `test_episode_export.py` ve `test_episode_batch.py`'ye birer test
+  eklendi (manifest var mı, geçerli JSON mı, sahne sayısı eşleşiyor mu,
+  yollar doğru klasör düzenini mi kullanıyor). Backend: 149 → 151 test,
+  hepsi yeşil (3 skip, düşük-bellek eşiğine bağlı, koddan bağımsız),
+  ruff+mypy --strict temiz (`ruff format --check`, CI'da kapı olmayan,
+  benim dokunmadığım dosyalarda da fark gösteren yerel bir sürüm
+  uyuşmazlığı — göz ardı edildi). Frontend değişmedi, build hâlâ temiz.
+  Docker'da hem tekil hem toplu export gerçekten alınıp manifest elle
+  incelendi, beklenen çıktı doğrulandı.

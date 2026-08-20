@@ -1,4 +1,5 @@
 import io
+import json
 import uuid
 import zipfile
 
@@ -68,6 +69,52 @@ async def test_export_endpoint_returns_a_zip_with_the_full_production_package(
     tags_line = archive.read("youtube_etiketler.txt").decode("utf-8")
     for tag in generated.json()["seo"]["tags"]:
         assert tag in tags_line
+
+
+async def test_export_endpoint_includes_a_valid_assembly_manifest(
+    client: httpx.AsyncClient,
+) -> None:
+    """The DaVinci Resolve assembly script consumes assembly-manifest.json instead of
+    scraping senaryo.md, so it must be valid JSON with one entry per scene and file
+    paths matching the folders (gorseller/, sesler/, mekan_videosu/) actually in the ZIP."""
+    generated = await client.post("/episodes/generate", json={"theme_id": "paylasma"})
+    episode_id = generated.json()["id"]
+    episode = generated.json()["episode"]
+
+    response = await client.get(f"/episodes/{episode_id}/export")
+
+    assert response.status_code == 200
+    archive = zipfile.ZipFile(io.BytesIO(response.content))
+    assert "assembly-manifest.json" in archive.namelist()
+    manifest = json.loads(archive.read("assembly-manifest.json").decode("utf-8"))
+
+    assert manifest["episodeId"] == episode_id
+    assert manifest["title"] == episode["title"]
+    assert manifest["themeKey"] == episode["theme_id"]
+    assert manifest["fps"] == 30
+    assert manifest["resolution"] == {"width": 1920, "height": 1080}
+    assert manifest["totalDurationSeconds"] == episode["total_duration_seconds"]
+    assert len(manifest["scenes"]) == len(episode["scenes"])
+
+    for index, (scene, manifest_scene) in enumerate(
+        zip(episode["scenes"], manifest["scenes"], strict=True), start=1
+    ):
+        assert manifest_scene["sceneNumber"] == index
+        assert manifest_scene["sceneName"] == scene["name"]
+        assert manifest_scene["backgroundType"] == "video"
+        assert manifest_scene["backgroundFile"].startswith("mekan_videosu/")
+        assert manifest_scene["audioFile"].startswith(f"sesler/{index:02d}-")
+        assert manifest_scene["audioFile"].endswith(".mp3")
+        assert manifest_scene["audioDurationSeconds"] is None
+        if scene.get("speaker"):
+            assert manifest_scene["speaker"] == scene["speaker"]
+            assert manifest_scene["captionText"] == scene["dialogue"]
+            assert manifest_scene["characterImage"] is not None
+            assert manifest_scene["characterImage"].startswith("gorseller/")
+        else:
+            assert manifest_scene["speaker"] == "Anlatıcı"
+            assert manifest_scene["captionText"] == scene["text"]
+            assert manifest_scene["characterImage"] is None
 
 
 async def test_export_endpoint_bundles_a_new_character_and_location_correctly(

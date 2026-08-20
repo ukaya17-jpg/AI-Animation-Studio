@@ -9,6 +9,7 @@ art, voice samples, location video) already generated for the episode.
 from __future__ import annotations
 
 import io
+import json
 import re
 import tempfile
 import zipfile
@@ -16,6 +17,12 @@ from pathlib import Path
 from typing import Any
 
 _STATIC_ROOT = Path(__file__).resolve().parent.parent / "static"
+
+# Standard YouTube 1080p30 target — the only spec this project has ever
+# produced media at, so it's a fixed constant rather than a per-episode field.
+_MANIFEST_FPS = 30
+_MANIFEST_WIDTH = 1920
+_MANIFEST_HEIGHT = 1080
 
 _TURKISH_ASCII_MAP = str.maketrans(
     {
@@ -185,6 +192,10 @@ class EpisodeExportService:
         archive.writestr(f"{prefix}youtube_etiketler.txt", ", ".join(seo["tags"]))
         archive.writestr(f"{prefix}shorts_plani.md", self._shorts_markdown(shorts))
         archive.writestr(f"{prefix}README.txt", _README_TEXT)
+        manifest = self._build_assembly_manifest(detail, shared_media=False)
+        archive.writestr(
+            f"{prefix}assembly-manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2)
+        )
 
         lead = episode["lead_character"]
         support = episode["support_character"]
@@ -228,6 +239,10 @@ class EpisodeExportService:
         archive.writestr(f"{prefix}youtube_etiketler.txt", ", ".join(seo["tags"]))
         archive.writestr(f"{prefix}shorts_plani.md", self._shorts_markdown(shorts))
         archive.writestr(f"{prefix}README.txt", self._batch_readme(episode))
+        manifest = self._build_assembly_manifest(detail, shared_media=True)
+        archive.writestr(
+            f"{prefix}assembly-manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2)
+        )
 
     @classmethod
     def _batch_readme(cls, episode: dict[str, Any]) -> str:
@@ -248,6 +263,80 @@ class EpisodeExportService:
             location_image=cls._media_relative_path("mekanlar", location["image_url"]),
             location_video=cls._media_relative_path("mekanlar", location["ambient_video_url"]),
         )
+
+    @classmethod
+    def _build_assembly_manifest(
+        cls, detail: dict[str, Any], *, shared_media: bool
+    ) -> dict[str, Any]:
+        """Build the machine-readable, scene-by-scene manifest for automated video assembly.
+
+        Mirrors the same script/media data ``senaryo.md`` already renders as
+        prose, but as a stable JSON contract an external tool (e.g. a DaVinci
+        Resolve Python script) can parse without scraping Markdown. File
+        paths follow the same two layouts the rest of this class already
+        writes media under: local ``gorseller/``/``mekan_videosu/`` folders
+        for a single export, or the shared ``../medya/`` tree a batch
+        export's per-episode folder points its README at.
+
+        ``audioFile`` names a per-scene narration clip this export does not
+        itself generate or bundle — nothing in this codebase produces
+        per-scene voiceover yet, only the short per-*character* voice
+        samples already written to ``sesler/``. It's a deterministic naming
+        convention (``<sceneNumber>-<sceneName-slug>-<speaker-slug>.mp3``)
+        for wherever a separate voiceover pipeline drops its output, which
+        is why ``audioDurationSeconds`` stays ``null`` rather than being
+        computed here — the assembly script reads it from that file once it
+        exists.
+        """
+        episode = detail["episode"]
+        lead = episode["lead_character"]
+        support = episode["support_character"]
+        location = episode["location"]
+
+        def media_path(url: str, local_folder: str, shared_folder: str) -> str:
+            if shared_media:
+                return f"../medya/{shared_folder}/{Path(url).name}"
+            return f"{local_folder}/{Path(url).name}"
+
+        background_file = media_path(location["ambient_video_url"], "mekan_videosu", "mekanlar")
+
+        scenes: list[dict[str, Any]] = []
+        for index, scene in enumerate(episode["scenes"], start=1):
+            speaker = scene.get("speaker")
+            if speaker == lead["name"]:
+                character_image: str | None = media_path(
+                    lead["image_url"], "gorseller", "karakterler"
+                )
+            elif speaker == support["name"]:
+                character_image = media_path(support["image_url"], "gorseller", "karakterler")
+            else:
+                character_image = None
+            speaker_slug = cls._slug(speaker) if speaker else "anlatici"
+            scenes.append(
+                {
+                    "sceneNumber": index,
+                    "sceneName": scene["name"],
+                    "backgroundType": "video",
+                    "backgroundFile": background_file,
+                    "characterImage": character_image,
+                    "audioFile": (
+                        f"sesler/{index:02d}-{cls._slug(scene['name'])}-{speaker_slug}.mp3"
+                    ),
+                    "audioDurationSeconds": None,
+                    "captionText": scene.get("dialogue") or scene["text"],
+                    "speaker": speaker or "Anlatıcı",
+                }
+            )
+
+        return {
+            "episodeId": str(detail["id"]),
+            "title": episode["title"],
+            "themeKey": episode["theme_id"],
+            "fps": _MANIFEST_FPS,
+            "resolution": {"width": _MANIFEST_WIDTH, "height": _MANIFEST_HEIGHT},
+            "scenes": scenes,
+            "totalDurationSeconds": episode["total_duration_seconds"],
+        }
 
     @staticmethod
     def _media_relative_path(subfolder: str, static_url: str) -> str:

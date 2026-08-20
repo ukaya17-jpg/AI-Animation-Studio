@@ -1,3 +1,5 @@
+import io
+import json
 import os
 import tempfile
 import zipfile
@@ -223,6 +225,43 @@ async def test_export_batch_bundles_every_project_episode_in_its_own_subfolder(
         assert created[0]["title"] in script
     finally:
         os.remove(tmp_path)
+
+
+async def test_export_batch_includes_a_valid_assembly_manifest_per_episode(
+    client: httpx.AsyncClient,
+) -> None:
+    """Unlike the single-episode export, a batch episode's media isn't copied into its own
+    folder — it lives once under the shared medya/ tree — so the manifest's image/video
+    paths must point there (``../medya/...``) instead of the local gorseller/mekan_videosu/
+    folders the single export uses. Uses one generated episode (not the full 28-theme
+    batch) to stay fast and avoid the low-memory skip the full-catalog tests need."""
+    project_id, headers = await _create_project(client, "batch-export-manifest@example.com")
+    generated = await client.post(
+        "/episodes/generate",
+        json={"theme_id": "paylasma", "project_id": project_id},
+        headers=headers,
+    )
+    episode_id = generated.json()["id"]
+    episode = generated.json()["episode"]
+
+    response = await client.get(
+        "/episodes/export-batch", params={"project_id": project_id}, headers=headers
+    )
+
+    assert response.status_code == 200
+    archive = zipfile.ZipFile(io.BytesIO(response.content))
+    names = archive.namelist()
+    manifest_names = [name for name in names if name.endswith("assembly-manifest.json")]
+    assert len(manifest_names) == 1
+    manifest = json.loads(archive.read(manifest_names[0]).decode("utf-8"))
+
+    assert manifest["episodeId"] == episode_id
+    assert len(manifest["scenes"]) == len(episode["scenes"])
+    for manifest_scene in manifest["scenes"]:
+        assert manifest_scene["backgroundFile"].startswith("../medya/mekanlar/")
+        assert manifest_scene["audioFile"].startswith("sesler/")
+        if manifest_scene["characterImage"] is not None:
+            assert manifest_scene["characterImage"].startswith("../medya/karakterler/")
 
 
 @_skip_if_low_memory
