@@ -124,3 +124,55 @@ export function toFriendlyBatchExportErrorMessage(error: unknown): string {
   }
   return 'Tüm bölümler paketi indirilirken beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.'
 }
+
+export type RenderStatus = 'pending' | 'completed' | 'failed'
+
+export async function startEpisodeRender(episodeId: string): Promise<string> {
+  const response = await apiClient.post<{ render_id: string }>(`/episodes/${episodeId}/render`)
+  return response.data.render_id
+}
+
+export async function fetchRenderStatus(
+  episodeId: string,
+  renderId: string,
+): Promise<{ status: RenderStatus; error: string | null }> {
+  const response = await apiClient.get<{ status: RenderStatus; error: string | null }>(
+    `/episodes/${episodeId}/render/${renderId}/status`,
+  )
+  return response.data
+}
+
+/** A finished render can be tens of MB, so this gets the same generous override as batch export. */
+const _RENDER_DOWNLOAD_TIMEOUT_MS = 60_000
+
+export async function downloadRenderedEpisode(
+  episodeId: string,
+  renderId: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const response = await apiClient.get<Blob>(`/episodes/${episodeId}/render/${renderId}/download`, {
+    responseType: 'blob',
+    timeout: _RENDER_DOWNLOAD_TIMEOUT_MS,
+  })
+  const disposition = response.headers['content-disposition'] as string | undefined
+  const filename = disposition?.match(_FILENAME_FROM_DISPOSITION)?.[1] ?? 'bolum-video.mp4'
+  return { blob: response.data, filename }
+}
+
+export function toFriendlyRenderErrorMessage(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    if (error.response?.status === 409) {
+      const detail = (error.response.data as { detail?: string } | undefined)?.detail
+      return detail ?? 'Bu bölüm için henüz tam seslendirme üretilmedi.'
+    }
+    if (error.response?.status === 404) {
+      return 'Bu bölüm veya video artık mevcut değil.'
+    }
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      return 'Video oluşturmak için projenin sahibi olarak giriş yapmalısın.'
+    }
+    if (error.code === 'ECONNABORTED' || !error.response) {
+      return 'Sunucuya ulaşılamadı. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.'
+    }
+  }
+  return 'Video oluşturulurken beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.'
+}

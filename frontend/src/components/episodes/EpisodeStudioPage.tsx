@@ -5,6 +5,7 @@ import { EpisodeHistoryList } from './EpisodeHistoryList'
 import { EpisodeSummary } from './EpisodeSummary'
 import { ExportButton } from './ExportButton'
 import { LessonBox } from './LessonBox'
+import { RenderButton } from './RenderButton'
 import { SceneCard } from './SceneCard'
 import { SeoPanel } from './SeoPanel'
 import { ShortsPanel } from './ShortsPanel'
@@ -201,6 +202,7 @@ export function EpisodeStudioPage() {
               <EpisodeSummary episode={result.episode} />
             </div>
             <ExportButton episodeId={result.id} className="shrink-0" />
+            <RenderButton episodeId={result.id} themeId={result.episode.theme_id} className="shrink-0" />
           </div>
 
           <div>

@@ -1,6 +1,9 @@
 """Neşeli Orman episode generation HTTP endpoints."""
 
+import shutil
 import uuid
+from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import FileResponse
@@ -8,6 +11,7 @@ from starlette.background import BackgroundTask
 
 from app.api.dependencies import (
     get_episode_export_service,
+    get_episode_render_service,
     get_episode_service,
     get_optional_current_user,
     get_project_service,
@@ -20,9 +24,12 @@ from app.schemas.episode import (
     EpisodeGenerateRequest,
     EpisodeGenerationResponse,
     GeneratedEpisodeListResponse,
+    RenderStartResponse,
+    RenderStatusResponse,
     ThemeSummaryResponse,
 )
 from app.services.episode_export import EpisodeExportService
+from app.services.episode_render import EpisodeRenderService
 from app.services.episode_service import EpisodeService
 from app.services.project_service import ProjectService
 
@@ -49,6 +56,23 @@ async def _authorize_project_access(
     project = await project_service.get_by_id(project_id)
     if project is None or project.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="You do not have access to this project.")
+
+
+async def _get_authorized_episode(
+    episode_id: uuid.UUID,
+    current_user: User | None,
+    project_service: ProjectService,
+    service: EpisodeService,
+) -> dict[str, Any]:
+    """Return one episode's full detail, enforcing the same 404/401/403 visibility
+    rule ``GET``/``export`` already use: project-linked episodes require that
+    project's owner, project-less episodes stay open."""
+    result = await service.get_generated_episode(episode_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Generated episode not found.")
+    if result["project_id"] is not None:
+        await _authorize_project_access(result["project_id"], current_user, project_service)
+    return result
 
 
 @router.get(
@@ -244,6 +268,92 @@ async def export_generated_episode(
         content=archive_bytes,
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post(
+    "/{episode_id}/render",
+    response_model=RenderStartResponse,
+    status_code=202,
+    summary="Start rendering one generated episode into a narrated MP4",
+)
+async def render_generated_episode(
+    episode_id: uuid.UUID,
+    current_user: User | None = Depends(get_optional_current_user),  # noqa: B008
+    project_service: ProjectService = Depends(get_project_service),  # noqa: B008
+    service: EpisodeService = Depends(get_episode_service),  # noqa: B008
+    render_service: EpisodeRenderService = Depends(get_episode_render_service),  # noqa: B008
+) -> RenderStartResponse:
+    """Start a background ffmpeg render and return a render id to poll for progress.
+
+    Same visibility rule as ``export``. Rendering takes on the order of
+    minutes, so this always returns immediately with a job id rather than
+    the finished video — poll ``.../render/{render_id}/status`` for
+    ``completed``/``failed``, then ``.../download``. Only themes with real
+    per-scene narration audio already on disk can render; everything else
+    returns 409 immediately instead of starting a job that can never
+    succeed.
+    """
+    result = await _get_authorized_episode(episode_id, current_user, project_service, service)
+    missing = render_service.missing_audio_message(result)
+    if missing is not None:
+        raise HTTPException(status_code=409, detail=missing)
+    render_id = await render_service.start_render(result)
+    return RenderStartResponse(render_id=render_id)
+
+
+@router.get(
+    "/{episode_id}/render/{render_id}/status",
+    response_model=RenderStatusResponse,
+    summary="Check one render job's status",
+)
+async def get_render_status(
+    episode_id: uuid.UUID,
+    render_id: str,
+    current_user: User | None = Depends(get_optional_current_user),  # noqa: B008
+    project_service: ProjectService = Depends(get_project_service),  # noqa: B008
+    service: EpisodeService = Depends(get_episode_service),  # noqa: B008
+    render_service: EpisodeRenderService = Depends(get_episode_render_service),  # noqa: B008
+) -> RenderStatusResponse:
+    """Return whether a render job is still pending, has completed, or failed."""
+    await _get_authorized_episode(episode_id, current_user, project_service, service)
+    status = await render_service.get_status(render_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail="Render job not found.")
+    return RenderStatusResponse(status=status["status"], error=status.get("error"))
+
+
+@router.get(
+    "/{episode_id}/render/{render_id}/download",
+    summary="Download one completed render's MP4",
+)
+async def download_rendered_episode(
+    episode_id: uuid.UUID,
+    render_id: str,
+    current_user: User | None = Depends(get_optional_current_user),  # noqa: B008
+    project_service: ProjectService = Depends(get_project_service),  # noqa: B008
+    service: EpisodeService = Depends(get_episode_service),  # noqa: B008
+    export_service: EpisodeExportService = Depends(get_episode_export_service),  # noqa: B008
+    render_service: EpisodeRenderService = Depends(get_episode_render_service),  # noqa: B008
+) -> Response:
+    """Stream a completed render's MP4, then delete its temporary work directory.
+
+    404s for an unknown render id, a job that hasn't completed (or failed)
+    yet, or a file that's already been downloaded and cleaned up once.
+    """
+    result = await _get_authorized_episode(episode_id, current_user, project_service, service)
+    status = await render_service.get_status(render_id)
+    if status is None or status["status"] != "completed":
+        raise HTTPException(status_code=404, detail="Render is not ready or does not exist.")
+    file_path = Path(status["filePath"])
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Rendered file is no longer available.")
+    filename = export_service.video_filename_for(result["episode"]["title"])
+    return FileResponse(
+        file_path,
+        media_type="video/mp4",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        background=BackgroundTask(shutil.rmtree, file_path.parent, ignore_errors=True),
     )
 
 

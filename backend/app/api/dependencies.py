@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.security import InvalidTokenError, decode_access_token
-from app.database.redis import redis_ping
+from app.database.redis import get_redis_client, redis_ping
 from app.database.session import AsyncSessionLocal, get_db_session
 from app.models.user import User
 from app.repositories.generated_episode_repository import GeneratedEpisodeRepository
@@ -14,6 +14,7 @@ from app.repositories.project_repository import ProjectRepository
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
 from app.services.episode_export import EpisodeExportService
+from app.services.episode_render import EpisodeRenderService
 from app.services.episode_service import EpisodeService
 from app.services.health import HealthService
 from app.services.project_service import ProjectService
@@ -42,6 +43,13 @@ async def get_episode_service(
 async def get_episode_export_service() -> EpisodeExportService:
     """Construct the stateless episode production-package export service."""
     return EpisodeExportService()
+
+
+async def get_episode_render_service(
+    export_service: EpisodeExportService = Depends(get_episode_export_service),  # noqa: B008
+) -> EpisodeRenderService:
+    """Construct the episode video-render service, backed by the shared Redis client."""
+    return EpisodeRenderService(redis=get_redis_client(), export_service=export_service)
 
 
 async def get_auth_service(

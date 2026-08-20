@@ -1584,3 +1584,95 @@ doldurmak oldu.
   uyuşmazlığı — göz ardı edildi). Frontend değişmedi, build hâlâ temiz.
   Docker'da hem tekil hem toplu export gerçekten alınıp manifest elle
   incelendi, beklenen çıktı doğrulandı.
+
+## [2026-08-20] Görev: sunucu tarafında ffmpeg ile otomatik video render
+
+- Durum: tamamlandı
+- Bu oturuma girdiğimde çalışma ağacında görevin neredeyse tamamı zaten
+  (muhtemelen bu konuşmanın özetlenip kırpılan bir önceki bölümünde)
+  yazılmış hâlde duruyordu: dosya taşıma, Dockerfile, `EpisodeRenderService`,
+  3 endpoint, şema, `RenderButton.tsx`, `episodesApi.ts` eklentileri, testler
+  — hepsi commit edilmemiş çalışma ağacında mevcuttu. Bu turun işi büyük
+  ölçüde **doğrulama, gerçek bir OOM hatasının kök nedenini bulup
+  düzeltme ve commit/push** oldu; sıfırdan tasarım değil.
+- Dosya organizasyonu (Adım 1): `paylasma-demo-audio/*.mp3` dosyaları
+  `EpisodeExportService._audio_filename_for_scene`'in ürettiği
+  `<sahneNo>-<sahneAdıSlug>-<konuşmacıSlug|anlatici>.mp3` kuralıyla birebir
+  eşleşecek şekilde `episodes/paylasma/sesler/` altına taşınmıştı; sahne
+  verisiyle (speaker sadece Açılış/Kapanış'ta dolu, diğer 3 sahnede
+  `None`→`anlatici`) elle çapraz kontrol ettim, tam örtüşüyor.
+  `EpisodeRenderService` ve `EpisodeExportService` artık aynı
+  `_audio_filename_for_scene` sınıf metodunu paylaşıyor — iki servisin
+  farklı adlandırma mantığına sapma riski yok.
+- Render pipeline: her sahnenin süresi nominal `duration_seconds` yerine
+  **gerçek `ffprobe` ses süresinden** okunuyor — görsel/ses senkronu için
+  doğru tasarım kararı, ama bunun bir sonucu var: "Paylaşma" için gerçek
+  seslendirme metni içerik bankasındaki nominal sahne sürelerinden çok daha
+  kısa (5 sahne toplamı 2.12+6.53+7.97+14.92+16.04 = **47.6s**), oysa
+  `assembly-manifest.json`'daki `totalDurationSeconds: 225` DaVinci
+  senaryosunun kaba tahmini. Yani render edilen video ~225s değil ~48s —
+  bu bir hata değil, ses gerçekte bu kadar kısa. Karakter overlay
+  (renk-anahtarlı `findik.png`, hafif tek-yönlü `zoompan` 1.0→1.05) sadece
+  konuşmacı ana/yardımcı karakter olduğunda ekleniyor; SRT altyazı
+  `subtitles=` filtresiyle gömülü.
+- **Docker'da bulunan gerçek hata: OOM kill.** İlk uçtan uca render
+  denemesi `/episodes/{id}/render` → poll → download ile Docker'da
+  çalıştırıldığında bir sahnenin ffmpeg süreci ortasında öldü; job durumu
+  `failed` oldu, hata mesajı sadece kesik bir ilerleme log'u gösteriyordu.
+  `dmesg | grep oom-kill` ile kök neden netleşti: host'ta toplam 3.8GB RAM
+  var, VSCode server/tsserver/diğer projelerin (MoneyPrinterTurbo vb.)
+  arka plan süreçleri yüzünden **swap'sız ortamda genelde sadece
+  400-700MB "available"** kalıyor — çekirdek, 1080p+zoompan+libx264
+  ffmpeg sürecini (anon-rss ~640MB) `task_memcg`'si container'ın kendisi
+  olacak şekilde `oom-kill:...task=ffmpeg` ile öldürdü. Bu, kod hatası
+  değil, bu geliştirme kutusuna özgü bir kaynak kısıtı (test paketindeki
+  "düşük-bellek eşiğine bağlı" 3 skip'le aynı kök neden ailesi). Kodda
+  bir değişiklik gerekmedi — aynı render'ı, kendi paralel
+  ruff/mypy/pytest/docker-build süreçlerimin bitip host'un sakinleştiği
+  bir anda tekrarlayınca (ve tek bir render işini aynı anda başka hiçbir
+  ağır iş çalışmadan çalıştırınca) sorunsuz tamamlandı. Üretim ortamında
+  (daha fazla RAM'li bir host) bu risk oluşmaz; bu makinede tekrar
+  denenirse aynı OOM'a rastlanabilir — bunu kullanıcının bilmesi gereken
+  bir ortam sınırlaması olarak buraya not ediyorum.
+- **Senkron/asenkron karar (görev metninde zaten önerilmişti, doğrulandı):**
+  asenkron doğru seçim. Gerçek Docker render'ı **~41 saniye** sürdü (kısa
+  ses yüzünden; daha uzun/gerçek seslendirmeli bölümlerde çok daha uzun
+  sürer) — bir HTTP isteğinin senkron olarak beklemesi için fazla.
+  `POST /render` hemen `202` + `render_id` dönüyor, Redis'te
+  `episode_render:<id>` anahtarı altında `pending`/`completed`/`failed`
+  durumu 6 saat TTL ile tutuluyor, `GET .../status` bunu okuyor,
+  `GET .../download` tamamlanan dosyayı `FileResponse` ile akıtıp
+  `BackgroundTask` ile geçici `work_dir`'i siliyor (tek kullanımlık
+  indirme + otomatik temizlik).
+- **Kanıt (gerçek Docker render'ı, gerçek indirme, gerçek ffprobe):**
+  `ffprobe` çıktısı → video: `h264, 1920x1080, 30fps`; ses:
+  `aac, 44100Hz, mono`; `duration=47.566341`; dosya boyutu 17.4MB
+  (`neseli-orman-paylasma-video.mp4`, `Content-Disposition` header'ından).
+  İki kare (`-ss 1.0` ve `-ss 40.0`, `-frames:v 1`) elle çıkarılıp görsel
+  olarak incelendi: Paylaşım Bahçesi arka planı doğru kırpılmış/ölçeklenmiş,
+  Fındık karakteri kırk-renk-anahtarlamasıyla temiz bir şekilde (çerçeve
+  artefaktı yok) bindirilmiş, gömülü altyazı sahne diyaloğuyla birebir
+  eşleşiyor (`"Fındık: Paylaşınca daha lezzetli oluyor!"` ve kapanış
+  mesajı okunaklı şekilde görünüyor).
+- Test: `backend/scripts/test-like-ci.sh -q` (CI-eşdeğeri env, mevcut
+  `.env` diskteyken de) → ruff temiz, mypy --strict temiz, **160/160**
+  yeşil (`test_episode_render.py`'deki 9 test dahil — 6'sı gerçek
+  ffmpeg'i mock'luyor/job defterini test ediyor,
+  `test_render_produces_a_real_playable_mp4` gerçek ffmpeg'i çalıştırıp
+  `ffprobe` ile codec/süre doğruluyor, host'ta `ffmpeg` yoksa skip
+  oluyor). Sahiplik: 401 (auth yok)/403 (başka kullanıcı)/404 (bilinmeyen
+  bölüm veya render id) ayrı testlerle kapsanmış. Frontend: `lint`
+  (`--max-warnings=0`) ve `build` (`tsc -b && vite build`) temiz.
+- Docker imajı: `docker/backend.Dockerfile`'a eklenen
+  `apt-get install -y ffmpeg` katmanı `docker compose build backend` ile
+  doğrulandı; konteyner içinde `ffmpeg -version`/`ffprobe -version`
+  (7.1.5) çalıştığı ve `paylasma/sesler/*.mp3` dosyalarının doğru yolda
+  olduğu ayrıca kontrol edildi.
+
+## ONÜÇÜNCÜ TUR TAMAMLANDI
+- Görev tamamlandı. Kod tarafında sıfırdan yazılan bir şey yoktu (önceki,
+  özetlenmiş bir oturumda zaten yazılmıştı); bu turun katkısı gerçek bir
+  Docker OOM hatasını kök nedenine kadar izleyip (host kaynak kısıtı,
+  kod değil) uçtan uca gerçek bir render + indirme + ffprobe doğrulaması
+  yapmaktı. Backend 160/160 yeşil, ruff+mypy --strict temiz, frontend
+  lint+build temiz, Docker'da gerçek render kanıtlandı.

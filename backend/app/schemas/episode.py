@@ -98,6 +98,19 @@ class EpisodeGenerationResponse(BaseModel):
     shorts: ShortsPlanResponse
 
 
+class RenderStartResponse(BaseModel):
+    """Id of a render job just started; poll ``RenderStatusResponse`` with it."""
+
+    render_id: str
+
+
+class RenderStatusResponse(BaseModel):
+    """Current state of one render job: ``pending``, ``completed``, or ``failed``."""
+
+    status: str
+    error: str | None = None
+
+
 class GeneratedEpisodeSummaryResponse(BaseModel):
     """One row of the persisted-episode history list."""
 

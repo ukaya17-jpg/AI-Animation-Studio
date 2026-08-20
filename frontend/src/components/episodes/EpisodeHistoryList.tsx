@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from 'react'
 import type { GeneratedEpisodeSummary } from '../../types/episode'
 import { ExportButton } from './ExportButton'
+import { RenderButton } from './RenderButton'
 
 type EpisodeHistoryListProps = {
   episodes: GeneratedEpisodeSummary[]
@@ -75,6 +76,7 @@ export function EpisodeHistoryList({
                 </p>
               </div>
               <ExportButton episodeId={episode.id} />
+              <RenderButton episodeId={episode.id} themeId={episode.theme_id} />
             </div>
           </li>
         )

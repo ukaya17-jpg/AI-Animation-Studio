@@ -180,6 +180,18 @@ class EpisodeExportService:
         """Return a safe, ASCII .zip filename derived from a project name."""
         return f"{self._slug(project_name)}-tum-bolumler-paketi.zip"
 
+    def video_filename_for(self, title: str) -> str:
+        """Return a safe, ASCII .mp4 filename derived from an episode title."""
+        return f"{self._slug(title)}-video.mp4"
+
+    def audio_filename_for_scene(
+        self, scene_number: int, scene_name: str, speaker: str | None
+    ) -> str:
+        """Return the deterministic narration-clip filename ``assembly-manifest.json``
+        computes for one scene, so other services (e.g. ``EpisodeRenderService``) can
+        locate the same file on disk without re-deriving this naming rule."""
+        return self._audio_filename_for_scene(scene_number, scene_name, speaker)
+
     def _write_episode(self, archive: zipfile.ZipFile, prefix: str, detail: dict[str, Any]) -> None:
         """Write one episode's production package files, under an optional folder ``prefix``."""
         episode = detail["episode"]
@@ -311,7 +323,7 @@ class EpisodeExportService:
                 character_image = media_path(support["image_url"], "gorseller", "karakterler")
             else:
                 character_image = None
-            speaker_slug = cls._slug(speaker) if speaker else "anlatici"
+            audio_filename = cls._audio_filename_for_scene(index, scene["name"], speaker)
             scenes.append(
                 {
                     "sceneNumber": index,
@@ -319,9 +331,7 @@ class EpisodeExportService:
                     "backgroundType": "video",
                     "backgroundFile": background_file,
                     "characterImage": character_image,
-                    "audioFile": (
-                        f"sesler/{index:02d}-{cls._slug(scene['name'])}-{speaker_slug}.mp3"
-                    ),
+                    "audioFile": f"sesler/{audio_filename}",
                     "audioDurationSeconds": None,
                     "captionText": scene.get("dialogue") or scene["text"],
                     "speaker": speaker or "Anlatıcı",
@@ -342,6 +352,15 @@ class EpisodeExportService:
     def _media_relative_path(subfolder: str, static_url: str) -> str:
         """Return the ``../medya/<subfolder>/<file>`` path an episode folder's README shows."""
         return f"../medya/{subfolder}/{Path(static_url).name}"
+
+    @classmethod
+    def _audio_filename_for_scene(
+        cls, scene_number: int, scene_name: str, speaker: str | None
+    ) -> str:
+        """Return the ``<sceneNumber>-<sceneName-slug>-<speaker-slug>.mp3`` naming convention
+        a per-scene narration clip is expected under, whether or not that file exists yet."""
+        speaker_slug = cls._slug(speaker) if speaker else "anlatici"
+        return f"{scene_number:02d}-{cls._slug(scene_name)}-{speaker_slug}.mp3"
 
     @staticmethod
     def _slug(title: str) -> str:
